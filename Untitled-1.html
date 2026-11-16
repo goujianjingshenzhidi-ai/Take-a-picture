@@ -1,0 +1,2763 @@
+html
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Peach Instant Pro · Apple 风格 3D 拍立得工作室</title>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.147.0/build/three.min.js"></script>
+  <style>
+    :root {
+      --cocoa: #3d251a;
+      --mocha: #8a6250;
+      --mocha-soft: #b38c7a;
+      --glass-bg: rgba(255, 252, 248, 0.78);
+      --glass-strong: rgba(255, 253, 250, 0.92);
+      --glass-border: rgba(255, 255, 255, 0.92);
+      --hairline: rgba(168, 108, 78, 0.12);
+      --coral: #ff5d47;
+      --coral-deep: #d93e29;
+      --mint: #4cc29e;
+      --mint-deep: #2f9c7b;
+      --amber: #f59e3d;
+      --shadow-soft: 0 20px 50px rgba(176, 102, 70, 0.14);
+      --ease-apple: cubic-bezier(0.32, 0.72, 0, 1);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Rounded", "PingFang SC", "Hiragino Sans GB", sans-serif;
+      color: var(--cocoa);
+      background: linear-gradient(135deg, #fff8ee 0%, #ffe9df 45%, #f9e6f6 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* 阳光柔光背景光斑（零灰色） */
+    .ambient-orb {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(70px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.65;
+    }
+    .orb-1 { width: 420px; height: 420px; background: #ffd6bc; top: -110px; left: -80px; }
+    .orb-2 { width: 450px; height: 450px; background: #d5f5eb; bottom: -120px; left: 22%; }
+    .orb-3 { width: 380px; height: 380px; background: #fad0eb; top: 18%; right: -90px; }
+
+    /* Apple 风格顶部悬浮磨砂栏 */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      padding: 12px 26px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      background: rgba(255, 250, 245, 0.74);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.85);
+      box-shadow: 0 4px 24px rgba(175, 105, 75, 0.06);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+    }
+
+    .brand-app-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: linear-gradient(180deg, #fffdf9 0%, #fff1e6 100%);
+      border: 1.5px solid #fff;
+      box-shadow: 0 4px 12px rgba(190, 108, 76, 0.2), inset 0 1px 0 #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 5px;
+    }
+
+    .brand-rainbow {
+      width: 100%;
+      height: 100%;
+      border-radius: 5px;
+      background: linear-gradient(180deg, #ff594f 0% 20%, #ff9b3d 20% 40%, #ffd23f 40% 60%, #4cd995 60% 80%, #55a8ff 80% 100%);
+    }
+
+    .brand-title {
+      font-weight: 700;
+      font-size: 16px;
+      letter-spacing: -0.2px;
+    }
+
+    .brand-sub {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--coral);
+    }
+
+    /* Apple 分段控制器（Segmented Control） */
+    .apple-segmented {
+      position: relative;
+      display: inline-flex;
+      background: rgba(236, 212, 198, 0.45);
+      padding: 3.5px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.65);
+      box-shadow: inset 0 1px 3px rgba(155, 95, 65, 0.12);
+    }
+
+    .seg-btn {
+      position: relative;
+      z-index: 2;
+      border: none;
+      background: transparent;
+      color: var(--mocha);
+      font-size: 13px;
+      font-weight: 600;
+      padding: 7px 18px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: color 0.25s var(--ease-apple);
+      white-space: nowrap;
+    }
+
+    .seg-btn.active {
+      color: var(--cocoa);
+      background: #fff;
+      box-shadow: 0 3px 10px rgba(165, 95, 65, 0.16), 0 1px 2px rgba(0,0,0,0.04);
+    }
+
+    .header-status {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--mocha);
+      background: rgba(255, 255, 255, 0.78);
+      border: 1px solid #fff;
+      padding: 6px 13px;
+      border-radius: 999px;
+      box-shadow: 0 3px 10px rgba(175, 105, 75, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--mint);
+      box-shadow: 0 0 8px var(--mint);
+    }
+
+    /* 视图容器 */
+    .view-section {
+      position: relative;
+      z-index: 1;
+      max-width: 1260px;
+      margin: 0 auto;
+      padding: 20px 24px 135px;
+    }
+
+    .studio-grid {
+      display: grid;
+      grid-template-columns: 1.12fr 420px;
+      gap: 26px;
+      align-items: start;
+    }
+
+    /* Apple 立体按钮基础 */
+    .apple-pill-btn {
+      border: 1px solid rgba(255,255,255,0.95);
+      background: linear-gradient(180deg, #ffffff 0%, #fff5ed 100%);
+      color: var(--cocoa);
+      padding: 9px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: 0 4px 0 #ebd1c1, 0 8px 18px rgba(176, 102, 70, 0.12);
+      transition: transform 0.14s var(--ease-apple), box-shadow 0.14s;
+    }
+    .apple-pill-btn:hover { transform: translateY(-1px); }
+    .apple-pill-btn:active { transform: translateY(3px); box-shadow: 0 1px 0 #ebd1c1; }
+    .apple-pill-btn.active {
+      background: linear-gradient(180deg, #ff7a64 0%, var(--coral) 100%);
+      color: #fff;
+      border-color: #ff9c8a;
+      box-shadow: 0 4px 0 var(--coral-deep), 0 10px 20px rgba(255, 93, 71, 0.28);
+    }
+
+    /* ====== 左侧：3D 相机舞台 + 显影涂鸦贴纸区 ====== */
+    .stage-column {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .source-dock {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      justify-content: center;
+      padding: 7px 12px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 999px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .cam-alert {
+      display: none;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: #c23b26;
+      background: #fff1ed;
+      border: 1.5px solid #ffc7ba;
+      padding: 9px 16px;
+      border-radius: 14px;
+      max-width: 480px;
+      text-align: center;
+    }
+
+    .camera-3d-stage {
+      width: 100%;
+      height: 345px;
+      position: relative;
+      border-radius: 30px;
+      background: radial-gradient(circle at 50% 40%, #fffdf9 0%, #ffebe0 62%, #fad9ea 100%);
+      border: 2px solid #ffffff;
+      box-shadow: 0 24px 54px rgba(184, 108, 76, 0.16), inset 0 4px 16px rgba(255,255,255,0.95);
+      overflow: hidden;
+      cursor: grab;
+      touch-action: none;
+    }
+    .camera-3d-stage:active { cursor: grabbing; }
+    #camera3dCanvas { width: 100%; height: 100%; display: block; }
+
+    .stage-hud-top {
+      position: absolute;
+      top: 14px; left: 16px; right: 16px;
+      display: flex; justify-content: space-between; align-items: center;
+      pointer-events: none;
+    }
+
+    .hud-tag {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.5px;
+      color: var(--cocoa);
+      background: rgba(255, 255, 255, 0.85);
+      backdrop-filter: blur(10px);
+      padding: 5px 12px; border-radius: 999px; border: 1px solid #fff;
+      box-shadow: 0 4px 10px rgba(170, 100, 70, 0.1);
+    }
+
+    .hud-reset-btn {
+      pointer-events: auto;
+      border: 1px solid #fff;
+      background: rgba(255, 255, 255, 0.88);
+      color: var(--cocoa);
+      font-size: 11.5px; font-weight: 600;
+      padding: 5px 12px; border-radius: 999px;
+      cursor: pointer;
+      box-shadow: 0 3px 0 #ead1c1;
+    }
+    .hud-reset-btn:active { transform: translateY(2px); box-shadow: none; }
+
+    .stage-hud-bottom {
+      position: absolute;
+      bottom: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 5;
+    }
+
+    .shutter-pill {
+      border: 2px solid #fff;
+      background: linear-gradient(180deg, #ffffff 0%, #fff3eb 100%);
+      padding: 6px 20px 6px 8px;
+      border-radius: 999px;
+      display: flex; align-items: center; gap: 10px;
+      cursor: pointer; font-size: 13.5px; font-weight: 700; color: var(--cocoa);
+      box-shadow: 0 5px 0 #e6cbb8, 0 14px 28px rgba(185, 100, 68, 0.22);
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .shutter-pill:active { transform: translateY(3px); box-shadow: 0 2px 0 #e6cbb8; }
+
+    .shutter-gem {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: radial-gradient(circle at 32% 28%, #ff8f7a, var(--coral) 62%, var(--coral-deep) 100%);
+      border: 2px solid #fff;
+      box-shadow: 0 3px 8px rgba(255, 93, 71, 0.45);
+    }
+
+    .flash-overlay {
+      position: fixed; inset: 0; background: #fffaf5; opacity: 0; pointer-events: none; z-index: 200;
+    }
+    .flash-overlay.bang { animation: studioFlash 0.42s var(--ease-apple); }
+    @keyframes studioFlash { 0% { opacity: 0.86; } 100% { opacity: 0; } }
+
+    /* ====== 拍立得相片工作区（擦拭显影 + 涂鸦 + 贴纸） ====== */
+    .print-desk {
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .card-mode-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .sub-tool-tray {
+      display: none;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      padding: 8px 14px;
+      background: var(--glass-strong);
+      border: 1.5px solid #fff;
+      border-radius: 18px;
+      box-shadow: 0 10px 24px rgba(170, 100, 70, 0.12);
+    }
+    .sub-tool-tray.show { display: flex; }
+
+    .brush-dot {
+      width: 24px; height: 24px; border-radius: 50%;
+      border: 2px solid #fff;
+      cursor: pointer;
+      box-shadow: 0 2px 6px rgba(120, 60, 40, 0.25);
+      transition: transform 0.15s;
+    }
+    .brush-dot.active { transform: scale(1.22); outline: 2px solid var(--coral); }
+
+    .sticker-pick {
+      font-size: 20px;
+      width: 34px; height: 34px;
+      border-radius: 10px;
+      border: 1px solid #f4dfd2;
+      background: #fff8f2;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.12s;
+    }
+    .sticker-pick:hover { transform: scale(1.14); background: #ffeae0; }
+
+    .mini-tool-btn {
+      border: 1px solid #f0d7c7;
+      background: #fff;
+      color: var(--cocoa);
+      font-size: 11.5px;
+      font-weight: 600;
+      padding: 5px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+    }
+    .mini-tool-btn:hover { background: #fff2ea; }
+
+    /* 拍立得相片卡片容器 */
+    .photo-card-3d-wrap {
+      perspective: 1100px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .photo-card {
+      position: relative;
+      border-radius: 6px;
+      box-shadow: 0 24px 50px rgba(168, 96, 66, 0.22), 0 6px 14px rgba(120, 60, 40, 0.08);
+      user-select: none;
+      touch-action: none;
+      overflow: hidden;
+      transition: transform 0.22s var(--ease-apple);
+    }
+
+    .photo-card.mode-move { cursor: grab; }
+    .photo-card.mode-doodle { cursor: crosshair; }
+    .photo-card.dragging { cursor: grabbing; transition: none; z-index: 95; }
+    .photo-card.ejecting { animation: printSlideOut 0.85s var(--ease-apple) forwards; }
+    .photo-card.shaking { animation: shakeFilm 0.36s ease-in-out; }
+
+    @keyframes printSlideOut {
+      0% { transform: translateY(-50px) rotateX(24deg) scale(0.88); opacity: 0; }
+      100% { transform: translateY(0) rotateX(0deg) scale(1); opacity: 1; }
+    }
+    @keyframes shakeFilm {
+      0%, 100% { transform: rotate(0deg); }
+      25% { transform: rotate(-4deg) translateX(-6px); }
+      75% { transform: rotate(4deg) translateX(6px); }
+    }
+
+    canvas#previewCanvas {
+      display: block;
+      max-width: 280px;
+      max-height: 340px;
+      width: auto;
+      height: auto;
+      border-radius: 4px;
+    }
+
+    /* 局部擦拭显影遮罩层 + 手绘涂鸦层 + 贴纸层 */
+    canvas#developMaskCanvas, canvas#doodleCanvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    canvas#developMaskCanvas {
+      z-index: 3;
+      pointer-events: none;
+      transition: opacity 0.6s ease;
+    }
+
+    canvas#doodleCanvas {
+      z-index: 4;
+      pointer-events: none;
+    }
+    .photo-card.mode-doodle canvas#doodleCanvas {
+      pointer-events: auto;
+    }
+
+    .sticker-layer {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .placed-sticker {
+      position: absolute;
+      transform: translate(-50%, -50%);
+      font-size: 28px;
+      cursor: grab;
+      pointer-events: auto;
+      user-select: none;
+      touch-action: none;
+      filter: drop-shadow(0 3px 5px rgba(90, 40, 20, 0.25));
+      transition: transform 0.12s;
+    }
+    .placed-sticker:hover { transform: translate(-50%, -50%) scale(1.15); }
+    .placed-sticker .st-del {
+      position: absolute;
+      top: -6px; right: -8px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--coral);
+      color: #fff;
+      font-size: 10px;
+      display: none;
+      align-items: center; justify-content: center;
+      border: 1px solid #fff;
+      cursor: pointer;
+    }
+    .placed-sticker:hover .st-del { display: flex; }
+
+    .photo-gloss {
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      pointer-events: none;
+      mix-blend-mode: soft-light;
+    }
+
+    .empty-print-slot {
+      display: none;
+      padding: 26px 30px;
+      border-radius: 22px;
+      background: var(--glass-strong);
+      border: 2px dashed #f0c2ae;
+      text-align: center;
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--mocha);
+      line-height: 1.7;
+    }
+
+    .print-status {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--mocha);
+      text-align: center;
+      margin: 0;
+    }
+
+    .print-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-3d-mint {
+      border: 1.5px solid #86e6c8;
+      background: linear-gradient(180deg, #62d6b3 0%, var(--mint) 100%);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+      box-shadow: 0 4px 0 var(--mint-deep), 0 10px 20px rgba(60, 163, 132, 0.25);
+    }
+    .btn-3d-mint:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--mint-deep); }
+
+    .btn-3d-amber {
+      border: 1.5px solid #ffd599;
+      background: linear-gradient(180deg, #ffb454 0%, var(--amber) 100%);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+      box-shadow: 0 4px 0 #cb7b1d, 0 10px 20px rgba(245, 158, 61, 0.25);
+    }
+    .btn-3d-amber:active { transform: translateY(3px); box-shadow: 0 1px 0 #cb7b1d; }
+
+    .btn-3d-peach {
+      border: 1.5px solid #ffd4c4;
+      background: linear-gradient(180deg, #fff5f0 0%, #ffe3d7 100%);
+      color: #c8452d;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px;
+      box-shadow: 0 4px 0 #f2bfb0;
+    }
+    .btn-3d-peach:active { transform: translateY(3px); box-shadow: 0 1px 0 #f2bfb0; }
+
+    /* ====== 照片存档架 ====== */
+    .film-archive {
+      width: 100%;
+      background: var(--glass-bg);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 24px;
+      padding: 16px 18px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .archive-head {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 12.5px; font-weight: 700; color: var(--cocoa);
+      margin-bottom: 12px; flex-wrap: wrap; gap: 6px;
+    }
+    .archive-sub { font-size: 11px; font-weight: 600; color: var(--mocha); }
+
+    .film-grid-archive {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 11px;
+    }
+
+    .archive-card {
+      width: 66px;
+      background: #fff;
+      padding: 5px 5px 12px;
+      border-radius: 7px;
+      border: 1.5px solid #f3e0d4;
+      box-shadow: 0 4px 0 #ebd4c5, 0 8px 14px rgba(170, 100, 70, 0.12);
+      position: relative;
+      cursor: grab;
+      touch-action: none;
+      user-select: none;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .archive-card:hover { transform: translateY(-3px) rotate(-1.5deg); }
+    .archive-card.active {
+      border-color: var(--coral);
+      box-shadow: 0 4px 0 #f29d8e, 0 8px 18px rgba(255, 93, 71, 0.22);
+    }
+    .archive-card img {
+      width: 100%; height: 52px; object-fit: cover; border-radius: 3px; display: block; pointer-events: none;
+    }
+    .archive-del {
+      position: absolute; top: -7px; right: -7px;
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 1.5px solid #fff;
+      background: linear-gradient(180deg, #ff7a66 0%, var(--coral) 100%);
+      color: #fff; font-size: 12px; font-weight: 800; line-height: 1;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 6px rgba(224, 68, 45, 0.35);
+      z-index: 3;
+    }
+
+    .drag-ghost {
+      position: fixed; width: 78px; background: #fff; padding: 6px 6px 14px;
+      border-radius: 7px; box-shadow: 0 20px 40px rgba(160, 80, 50, 0.35);
+      pointer-events: none; z-index: 999;
+      transform: translate(-50%, -50%) rotate(6deg) scale(1.08);
+    }
+    .drag-ghost img { width: 100%; height: 60px; object-fit: cover; border-radius: 3px; display: block; }
+
+    /* ====== 右侧：Apple insetGrouped 控制台 ====== */
+    .inspector {
+      background: var(--glass-bg);
+      backdrop-filter: blur(28px) saturate(180%);
+      -webkit-backdrop-filter: blur(28px) saturate(180%);
+      border: 1.5px solid var(--glass-border);
+      border-radius: 28px;
+      padding: 20px;
+      box-shadow: var(--shadow-soft);
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .group-label {
+      font-size: 12px; font-weight: 700; color: var(--mocha);
+      margin-bottom: 9px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .label-left { display: flex; align-items: center; gap: 7px; }
+    .label-badge {
+      width: 19px; height: 19px; border-radius: 6px;
+      background: linear-gradient(180deg, #ff8f7a, var(--coral));
+      color: #fff; font-size: 10.5px; font-weight: 800;
+      display: inline-flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 0 var(--coral-deep);
+    }
+
+    .hw-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; }
+
+    .hw-card {
+      position: relative;
+      background: linear-gradient(180deg, #ffffff 0%, #fff7f1 100%);
+      border: 1.5px solid #f4dfd2;
+      border-radius: 16px;
+      padding: 11px 12px;
+      text-align: left;
+      cursor: pointer;
+      display: flex; flex-direction: column; gap: 2px;
+      box-shadow: 0 4px 0 #ebd4c5;
+      transition: transform 0.12s, box-shadow 0.12s;
+    }
+    .hw-card:active { transform: translateY(3px); box-shadow: 0 1px 0 #ebd4c5; }
+    .hw-card.active {
+      background: linear-gradient(180deg, #fff5ee 0%, #ffe6d9 100%);
+      border-color: var(--coral);
+      box-shadow: 0 4px 0 #f29d8e, 0 8px 16px rgba(255, 93, 71, 0.15);
+    }
+    .hw-card.active::after {
+      content: ""; position: absolute; top: 10px; right: 10px;
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--coral); box-shadow: 0 0 8px var(--coral);
+    }
+    .hw-card strong { font-size: 12.5px; color: var(--cocoa); }
+    .hw-card small { font-size: 10.5px; color: var(--mocha); }
+
+    /* 12款滤镜精致滚动网格 */
+    .film-grid-12 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      max-height: 230px;
+      overflow-y: auto;
+      padding: 2px 3px 6px;
+    }
+
+    .film-preset {
+      background: linear-gradient(180deg, #ffffff 0%, #fff7f1 100%);
+      border: 1.5px solid #f4dfd2;
+      border-radius: 14px;
+      padding: 8px 5px;
+      text-align: center;
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      box-shadow: 0 3px 0 #ebd4c5;
+      transition: transform 0.12s;
+    }
+    .film-preset:active { transform: translateY(2px); box-shadow: 0 1px 0 #ebd4c5; }
+    .film-preset.active {
+      background: linear-gradient(180deg, #fff4ed 0%, #ffe4d6 100%);
+      border-color: var(--coral);
+      box-shadow: 0 3px 0 #f29d8e;
+    }
+    .preset-swatch {
+      width: 28px; height: 8px; border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.85);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .film-preset strong { font-size: 11.5px; color: var(--cocoa); }
+    .film-preset small { font-size: 9.5px; color: var(--mocha); }
+
+    /* 相纸边框 + 团团盲盒稀有边框 */
+    .paper-swatches {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .swatch-chip {
+      min-width: 62px;
+      flex: 1 1 28%;
+      background: linear-gradient(180deg, #ffffff 0%, #fff7f1 100%);
+      border: 1.5px solid #f4dfd2;
+      border-radius: 13px;
+      padding: 8px 5px;
+      cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      font-size: 11px; font-weight: 700; color: var(--mocha);
+      box-shadow: 0 3px 0 #ebd4c5;
+      position: relative;
+      transition: transform 0.12s;
+    }
+    .swatch-chip:active { transform: translateY(2px); box-shadow: none; }
+    .swatch-chip.active {
+      background: #fff2ea; color: var(--cocoa); border-color: var(--coral);
+      box-shadow: 0 3px 0 #f29d8e;
+    }
+    .swatch-chip.locked {
+      opacity: 0.62;
+      cursor: not-allowed;
+      background: #fff7f2;
+    }
+    .swatch-circle {
+      width: 22px; height: 22px; border-radius: 50%;
+      border: 2px solid #fff;
+      box-shadow: 0 2px 5px rgba(120, 70, 50, 0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px;
+    }
+
+    .blindbox-pill {
+      font-size: 10.5px;
+      font-weight: 700;
+      color: #c85232;
+      background: #ffe8de;
+      padding: 3px 9px;
+      border-radius: 999px;
+      border: 1px solid #ffcab8;
+    }
+
+    /* Apple insetGrouped 拨动开关 */
+    .toggle-stack {
+      display: flex; flex-direction: column;
+      background: rgba(255, 255, 255, 0.72);
+      border: 1px solid rgba(255,255,255,0.9);
+      border-radius: 18px;
+      padding: 4px 14px;
+      box-shadow: inset 0 1px 4px rgba(180, 120, 90, 0.08);
+    }
+
+    .hw-switch-row {
+      display: flex; align-items: center; justify-content: space-between;
+      font-size: 13px; font-weight: 600; color: var(--cocoa);
+      padding: 10px 0;
+      border-bottom: 1px solid var(--hairline);
+    }
+    .hw-switch-row:last-child { border-bottom: none; }
+
+    .ios-switch { position: relative; display: inline-block; width: 46px; height: 26px; cursor: pointer; }
+    .ios-switch input { opacity: 0; width: 0; height: 0; }
+    .switch-track {
+      position: absolute; inset: 0; border-radius: 999px;
+      background: #f0dcd0;
+      box-shadow: inset 0 2px 4px rgba(150, 90, 60, 0.2);
+      transition: background 0.25s;
+    }
+    .switch-thumb {
+      position: absolute; top: 3px; left: 3px;
+      width: 20px; height: 20px; border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 3px 6px rgba(130, 70, 45, 0.25);
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .ios-switch input:checked + .switch-track { background: var(--coral); }
+    .ios-switch input:checked + .switch-track .switch-thumb { transform: translateX(20px); }
+
+    .note-input {
+      width: 100%;
+      padding: 11px 14px;
+      border-radius: 14px;
+      border: 1.5px solid #f2ded0;
+      background: #fff;
+      font-size: 13.5px; font-weight: 600; color: var(--cocoa);
+      outline: none;
+    }
+    .note-input:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(255, 93, 71, 0.14); }
+
+    /* ====== 照片墙拼图视图 ====== */
+    .wall-view { display: none; }
+    .wall-view.active { display: block; }
+    .studio-view.hidden { display: none; }
+
+    .wall-toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 12px;
+      background: var(--glass-bg);
+      backdrop-filter: blur(22px);
+      border: 1.5px solid #fff;
+      border-radius: 22px;
+      padding: 14px 18px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow-soft);
+    }
+
+    .wall-themes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+
+    .wall-board {
+      width: 100%;
+      height: 620px;
+      border-radius: 28px;
+      border: 3px solid #fff;
+      position: relative;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(176, 102, 70, 0.18);
+      user-select: none;
+      touch-action: none;
+    }
+
+    .wall-theme-linen {
+      background-color: #fff6ea;
+      background-image: linear-gradient(rgba(235,195,170,0.22) 1px, transparent 1px), linear-gradient(90deg, rgba(235,195,170,0.22) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .wall-theme-peach {
+      background: linear-gradient(135deg, #ffe7dc 0%, #fff4e8 50%, #fbe3f3 100%);
+    }
+    .wall-theme-mint {
+      background-color: #e9f9f3;
+      background-image: radial-gradient(#a7e0cc 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+    }
+    .wall-theme-star {
+      background: linear-gradient(145deg, #3c2846 0%, #5c374c 60%, #7d4c55 100%);
+    }
+
+    .wall-item {
+      position: absolute;
+      width: 195px;
+      cursor: grab;
+      touch-action: none;
+      transition: box-shadow 0.15s;
+      filter: drop-shadow(0 14px 24px rgba(110, 55, 35, 0.28));
+    }
+    .wall-item.selected {
+      outline: 2.5px dashed var(--coral);
+      outline-offset: 6px;
+      border-radius: 6px;
+    }
+    .wall-item img {
+      width: 100%;
+      display: block;
+      border-radius: 4px;
+      pointer-events: none;
+    }
+
+    /* 可爱和纸胶带装饰 */
+    .washi-tape {
+      position: absolute;
+      top: -11px;
+      left: 50%;
+      transform: translateX(-50%) rotate(-3deg);
+      width: 68px;
+      height: 20px;
+      background: rgba(255, 168, 152, 0.78);
+      border-left: 2px dotted rgba(255,255,255,0.7);
+      border-right: 2px dotted rgba(255,255,255,0.7);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      pointer-events: none;
+    }
+
+    .wall-item-controls {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: none;
+      gap: 8px;
+      background: rgba(255, 253, 249, 0.92);
+      backdrop-filter: blur(16px);
+      padding: 7px 14px;
+      border-radius: 999px;
+      border: 1.5px solid #fff;
+      box-shadow: 0 10px 28px rgba(120, 60, 40, 0.22);
+      z-index: 20;
+    }
+    .wall-item-controls.show { display: flex; }
+
+    /* ====== 团团小猫（盲盒礼物吐出 + 眼珠追踪） ====== */
+    .pet-dock {
+      position: fixed;
+      right: 22px;
+      bottom: 18px;
+      z-index: 70;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+    }
+
+    .pet-bubble {
+      background: #fff;
+      border: 2px solid #ffe0cf;
+      color: var(--cocoa);
+      font-size: 12px;
+      font-weight: 700;
+      padding: 8px 14px;
+      border-radius: 18px 18px 4px 18px;
+      box-shadow: 0 8px 22px rgba(185, 105, 70, 0.18);
+      margin-bottom: 8px;
+      max-width: 240px;
+      line-height: 1.4;
+    }
+
+    .pet-pedestal {
+      width: 114px; height: 114px; border-radius: 50%;
+      background: radial-gradient(circle at 32% 24%, #ffffff 0%, #fff1e5 65%, #ffe0cb 100%);
+      border: 3px dashed #ffb79b;
+      box-shadow: 0 8px 0 #f2c4ae, 0 18px 36px rgba(185, 100, 65, 0.24), inset 0 4px 10px #fff;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; cursor: pointer;
+      transition: transform 0.25s var(--ease-apple), border-color 0.2s;
+    }
+    .pet-pedestal.pet-hungry {
+      transform: scale(1.18);
+      border-color: var(--coral);
+      background: radial-gradient(circle, #fff8f4, #ffd8c7);
+    }
+    .pet-pedestal.pet-eating { animation: petNom 0.42s ease-in-out 2; }
+    @keyframes petNom { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.15) rotate(-5deg); } }
+
+    .pet-badge {
+      position: absolute; top: -7px; left: -10px;
+      background: linear-gradient(180deg, #ff7e66, var(--coral));
+      color: #fff; border: 2px solid #fff;
+      font-size: 10.5px; font-weight: 800;
+      padding: 3px 9px; border-radius: 999px;
+      box-shadow: 0 3px 0 var(--coral-deep);
+      white-space: nowrap;
+    }
+
+    .pet-svg { width: 90px; height: 90px; overflow: visible; filter: drop-shadow(0 6px 8px rgba(160, 80, 40, 0.18)); }
+    .cat-mouth-open, .cat-eyes-happy { display: none; }
+    .pet-hungry .cat-mouth-idle { display: none; }
+    .pet-hungry .cat-mouth-open { display: block; }
+    .pet-eating .cat-eyes-track { display: none; }
+    .pet-eating .cat-eyes-happy { display: block; }
+
+    .pet-particle {
+      position: fixed; font-size: 20px; pointer-events: none; z-index: 999;
+      animation: floatUpParticle 0.95s ease-out forwards;
+    }
+    @keyframes floatUpParticle {
+      0% { transform: translate(-50%, 0) scale(0.6); opacity: 1; }
+      100% { transform: translate(-50%, -70px) scale(1.35); opacity: 0; }
+    }
+
+    /* 盲盒解锁庆贺弹窗 & 手机存图弹窗 */
+    .modal-backdrop {
+      position: fixed; inset: 0;
+      background: rgba(69, 43, 31, 0.52);
+      backdrop-filter: blur(10px);
+      z-index: 160; display: none; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-backdrop.open { display: flex; }
+
+    .apple-modal {
+      background: #fffdf9;
+      border: 2px solid #fff;
+      border-radius: 26px;
+      padding: 24px;
+      max-width: 350px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 30px 70px rgba(90, 45, 25, 0.32);
+    }
+    .apple-modal img {
+      max-width: 100%; max-height: 330px; border-radius: 6px;
+      box-shadow: 0 10px 24px rgba(150, 80, 50, 0.18); margin: 14px 0;
+    }
+    .apple-modal p { font-size: 13px; color: var(--mocha); line-height: 1.55; margin: 6px 0 16px; }
+
+    @media (max-width: 920px) {
+      header { padding: 10px 14px; flex-wrap: wrap; justify-content: center; }
+      .header-status { display: none; }
+      .studio-grid { grid-template-columns: 1fr; }
+      .view-section { padding: 14px 14px 140px; }
+      .camera-3d-stage { height: 280px; }
+      .wall-board { height: 480px; }
+      .wall-item { width: 145px; }
+      .pet-dock { right: 12px; bottom: 12px; }
+      .pet-pedestal { width: 88px; height: 88px; }
+      .pet-svg { width: 70px; height: 70px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="ambient-orb orb-1"></div>
+  <div class="ambient-orb orb-2"></div>
+  <div class="ambient-orb orb-3"></div>
+  <div class="flash-overlay" id="flashOverlay"></div>
+
+  <header>
+    <div class="brand">
+      <div class="brand-app-icon"><div class="brand-rainbow"></div></div>
+      <div>
+        <div class="brand-title">Peach Instant Pro</div>
+        <div class="brand-sub">Apple Aesthetic · 3D 拍立得</div>
+      </div>
+    </div>
+
+    <!-- Apple 分段视图切换器 -->
+    <div class="apple-segmented" id="mainNavSeg">
+      <button class="seg-btn active" data-view="studio">📸 3D 暗房拍摄</button>
+      <button class="seg-btn" data-view="wall">📌 照片墙拼图 (<span id="wallCountBadge">1</span>)</button>
+    </div>
+
+    <div class="header-status">
+      <span class="status-dot"></span>
+      <span>喂团团 3 张废片解锁盲盒边框</span>
+    </div>
+  </header>
+
+  <!-- ====== 视图 1：3D 暗房拍摄工作台 ====== -->
+  <section class="view-section studio-view" id="studioView">
+    <div class="studio-grid">
+      <!-- 左侧舞台 -->
+      <div class="stage-column">
+        <div class="source-dock">
+          <button class="apple-pill-btn" id="toggleCamBtn">📷 实时摄像头</button>
+          <button class="apple-pill-btn" id="flipCamBtn" style="display:none;">🔄 翻转镜头</button>
+          <label class="apple-pill-btn">
+            🖼️ 上传照片
+            <input type="file" id="fileInput" accept="image/*" hidden />
+          </label>
+        </div>
+
+        <div class="camera-3d-stage" id="camera3dStage">
+          <canvas id="camera3dCanvas"></canvas>
+          <div class="stage-hud-top">
+            <span class="hud-tag" id="hudModelTag">3D · POLAROID SX-70</span>
+            <button class="hud-reset-btn" id="resetOrbitBtn">↺ 复位视角</button>
+          </div>
+          <div class="stage-hud-bottom">
+            <button class="shutter-pill" id="shutterBtn">
+              <span class="shutter-gem"></span>
+              <span>按下快门出片</span>
+            </button>
+          </div>
+        </div>
+
+        <video id="cameraVideo" autoplay playsinline muted style="display:none;"></video>
+        <div class="cam-alert" id="camAlert"></div>
+
+        <!-- 拍立得显影 & 擦拭 & 涂鸦 & 贴纸工作区 -->
+        <div class="print-desk">
+          <div class="card-mode-bar" id="cardModeBar">
+            <div class="apple-segmented" id="cardInteractionSeg">
+              <button class="seg-btn active" data-mode="move">✨ 擦拭 / 拖喂</button>
+              <button class="seg-btn" data-mode="doodle">✏️ 手绘涂鸦</button>
+              <button class="seg-btn" data-mode="sticker">🎀 贴纸装饰</button>
+            </div>
+
+            <!-- 涂鸦子工具条 -->
+            <div class="sub-tool-tray" id="doodleTools">
+              <span class="brush-dot active" data-color="#ff5d47" style="background:#ff5d47;" title="珊瑚红"></span>
+              <span class="brush-dot" data-color="#452b1f" style="background:#452b1f;" title="可可棕"></span>
+              <span class="brush-dot" data-color="#ffffff" style="background:#ffffff;" title="奶油白"></span>
+              <span class="brush-dot" data-color="#f59e3d" style="background:#f59e3d;" title="暖阳金"></span>
+              <span class="brush-dot" data-color="#4cc29e" style="background:#4cc29e;" title="薄荷绿"></span>
+              <button class="mini-tool-btn" id="undoDoodleBtn">↩️ 撤销</button>
+              <button class="mini-tool-btn" id="clearDoodleBtn">🗑️ 清空</button>
+            </div>
+
+            <!-- 贴纸子工具条 -->
+            <div class="sub-tool-tray" id="stickerTools">
+              <button class="sticker-pick" data-st="🍓">🍓</button>
+              <button class="sticker-pick" data-st="✨">✨</button>
+              <button class="sticker-pick" data-st="🐾">🐾</button>
+              <button class="sticker-pick" data-st="🌸">🌸</button>
+              <button class="sticker-pick" data-st="🎀">🎀</button>
+              <button class="sticker-pick" data-st="💌">💌</button>
+              <button class="sticker-pick" data-st="🧸">🧸</button>
+              <button class="sticker-pick" data-st="🕶️">🕶️</button>
+              <button class="mini-tool-btn" id="clearStickersBtn">清空贴纸</button>
+            </div>
+          </div>
+
+          <div class="photo-card-3d-wrap">
+            <div class="photo-card mode-move" id="photoCard">
+              <canvas id="previewCanvas"></canvas>
+              <canvas id="developMaskCanvas"></canvas>
+              <canvas id="doodleCanvas"></canvas>
+              <div class="sticker-layer" id="stickerLayer"></div>
+              <div class="photo-gloss" id="photoGloss"></div>
+            </div>
+          </div>
+
+          <div class="empty-print-slot" id="emptySlot">
+            🐾 桌面上空空如也啦！<br />
+            点击 3D 相机快门再拍一张，或点下面存档里的照片继续制作~
+          </div>
+
+          <p class="print-status" id="printStatus">✨ 小技巧：显影中用手指在照片上摩擦搓热，不喜欢可直接拖给团团吃！</p>
+
+          <div class="print-actions" id="printActions">
+            <button class="btn-3d-mint" id="saveBtn">💾 存到相册</button>
+            <button class="btn-3d-amber" id="addToWallBtn">📌 贴上照片墙</button>
+            <button class="btn-3d-peach" id="feedBtn">🐾 喂给团团</button>
+          </div>
+        </div>
+
+        <!-- 照片存档架 -->
+        <div class="film-archive">
+          <div class="archive-head">
+            <span>🎞️ 照片存档架（点选使用 / 点 × 删除 / 拖拽喂团团）</span>
+            <span class="archive-sub" id="rollCount">1 张存档</span>
+          </div>
+          <div class="film-grid-archive" id="filmStrip"></div>
+        </div>
+      </div>
+
+      <!-- 右侧：Apple insetGrouped 控制台 -->
+      <aside class="inspector">
+        <div>
+          <div class="group-label">
+            <span class="label-left"><span class="label-badge">1</span> 3D 相机型号与机身</span>
+          </div>
+          <div class="hw-grid-2" id="modelGroup">
+            <button class="hw-card active" data-model="sx70">
+              <strong>Polaroid SX-70</strong>
+              <small>奶油玫瑰金 · 1:1方幅</small>
+            </button>
+            <button class="hw-card" data-model="p600">
+              <strong>OneStep 600</strong>
+              <small>黄油可可 · 彩虹方幅</small>
+            </button>
+            <button class="hw-card" data-model="mini">
+              <strong>Instax Mini</strong>
+              <small>马卡龙薄荷 · 竖版</small>
+            </button>
+            <button class="hw-card" data-model="wide">
+              <strong>Instax Wide</strong>
+              <small>浆果可可金 · 宽幅</small>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="group-label">
+            <span class="label-left"><span class="label-badge">2</span> 12 款胶片色彩预设</span>
+            <span style="font-size:11px;color:var(--mocha-soft);">可上下滑动</span>
+          </div>
+          <div class="film-grid-12" id="styleGroup">
+            <button class="film-preset active" data-style="sx70_warm">
+              <span class="preset-swatch" style="background:linear-gradient(90deg,#f59f5b,#ffe09c);"></span>
+              <strong>SX-70 暖阳</strong><small>油画复古</small>
+            </button>
+            <button class="film-preset" data-style="p600_cool">
+              <span class="preset-swatch" style="background:linear-gradient(90deg,#4d94a8,#f5b284);"></span>
+              <strong>600 青调</strong><small>冷暖反差</small>
+            </button>
+            <button class="film-preset" data-style="expired_98">
+              <span class="preset-swatch" style="background:linear-gradient(90deg,#c77dbd,#f2c6c2);"></span>
+              <strong>过期相纸 98</strong><small>洋红褪色</small>
+            </button>
+            <button class="film-preset" data-style="itype_clean">
+              <span class="preset-swatch" style="background:linear-gradient(90deg,#ff8066,#ffd275);"></span>
+              <strong>i-Type 通透</strong><small>现代立拍</small>
+            </button>
+            <button class="film-preset" data-style="instax_fresh">
+              <span class="preset-swatch" style="background:linear-gradient(90deg,#8be3d4,#ffd4e0);"></span>
+              <strong>Instax 清新</strong><small>日系通透</small>
+            </button>
+            <button class="film-preset" data-style="peach_soda">
+              <span class="preset-swatch" style="background:linear-gradient(90deg,#ff9e85,#ffe4c4);"></span>
+              <strong>蜜桃苏打</strong><small>甜美探店</small>
+            </button>
+            <button class="film-preset" data-style="fuji_forest">
+              <span class="preset-swatch" style="background:linear-gradient(90deg,#3da88e,#bdebe0);"></span>
+              <strong>富士森林</strong><small>夏日绿意</small>
+            </button>
+            <button class="film-preset" data-style="creamy_morandi">
+              <span class="preset-swatch" style="background:linear-gradient(90deg,#e0b9b2,#f5e4d7);"></span>
+              <strong>奶油莫兰迪</strong><small>低饱和柔</small>
+            </button>
+            <button class="film-preset" data-style="kodak_gold">
+              <span class="preset-swatch" style="background:linear-gradient(90deg,#e88a25,#ffe066);"></span>
+              <strong>柯达金 200</strong><small>夕阳暖金</small>
+            </button>
+            <button class="film-preset" data-style="hongkong_800t">
+              <span class="preset-swatch" style="background:linear-gradient(90deg,#2f6690,#ff6b6b);"></span>
+              <strong>香港霓虹</strong><small>夜景 800T</small>
+            </button>
+            <button class="film-preset" data-style="bw_street">
+              <span class="preset-swatch" style="background:linear-gradient(90deg,#4a332a,#f0e3da);"></span>
+              <strong>街拍黑白</strong><small>银盐反差</small>
+            </button>
+            <button class="film-preset" data-style="sepia_tea">
+              <span class="preset-swatch" style="background:linear-gradient(90deg,#9c6644,#ebd5be);"></span>
+              <strong>暖棕茶色</strong><small>时光纪念</small>
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="group-label">
+            <span class="label-left"><span class="label-badge">3</span> 相纸边框 & 团团盲盒</span>
+            <span class="blindbox-pill" id="blindboxProgress">下个盲盒: 0/3</span>
+          </div>
+          <div class="paper-swatches" id="paperGroup">
+            <button class="swatch-chip active" data-paper="cream">
+              <span class="swatch-circle" style="background:#fff6e8;"></span>奶油
+            </button>
+            <button class="swatch-chip" data-paper="white">
+              <span class="swatch-circle" style="background:#ffffff;"></span>纯白
+            </button>
+            <button class="swatch-chip" data-paper="pink">
+              <span class="swatch-circle" style="background:#ffdbe3;"></span>蜜桃粉
+            </button>
+            <button class="swatch-chip" data-paper="mint">
+              <span class="swatch-circle" style="background:#d2f3e6;"></span>薄荷绿
+            </button>
+            <button class="swatch-chip" data-paper="cocoa">
+              <span class="swatch-circle" style="background:#422b20;"></span>深可可
+            </button>
+            <!-- 4 款需喂养团团解锁的盲盒稀有相纸 -->
+            <button class="swatch-chip locked" data-paper="box_strawberry">
+              <span class="swatch-circle" style="background:#ffe2ea;">🔒</span>草莓波点
+            </button>
+            <button class="swatch-chip locked" data-paper="box_starlight">
+              <span class="swatch-circle" style="background:#3a254d;color:#ffd875;">🔒</span>星空流金
+            </button>
+            <button class="swatch-chip locked" data-paper="box_paw">
+              <span class="swatch-circle" style="background:#fff0d4;">🔒</span>团团猫爪
+            </button>
+            <button class="swatch-chip locked" data-paper="box_rainbow">
+              <span class="swatch-circle" style="background:linear-gradient(135deg,#ff9a9e,#fad0c4,#a1c4fd);">🔒</span>彩虹糖果
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="group-label">
+            <span class="label-left"><span class="label-badge">4</span> 光学暗房开关</span>
+          </div>
+          <div class="toggle-stack">
+            <div class="hw-switch-row">
+              <span>胶片颗粒与暗角</span>
+              <label class="ios-switch">
+                <input type="checkbox" id="grainToggle" checked />
+                <span class="switch-track"><span class="switch-thumb"></span></span>
+              </label>
+            </div>
+            <div class="hw-switch-row">
+              <span>随机漏光 (Light Leak)</span>
+              <div style="display:flex;align-items:center;gap:8px;">
+                <button class="mini-tool-btn" id="rerollLeakBtn" type="button">换角度</button>
+                <label class="ios-switch">
+                  <input type="checkbox" id="leakToggle" />
+                  <span class="switch-track"><span class="switch-thumb"></span></span>
+                </label>
+              </div>
+            </div>
+            <div class="hw-switch-row">
+              <span>90s 橙红日期印记</span>
+              <label class="ios-switch">
+                <input type="checkbox" id="dateToggle" checked />
+                <span class="switch-track"><span class="switch-thumb"></span></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="group-label">
+            <span class="label-left"><span class="label-badge">5</span> 底部手写备忘</span>
+          </div>
+          <input
+            type="text"
+            id="captionInput"
+            class="note-input"
+            maxlength="30"
+            value="Peach Instant · 日落日记"
+            placeholder="写下一句纪念..."
+          />
+        </div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ====== 视图 2：照片墙拼图模式 ====== -->
+  <section class="view-section wall-view" id="wallView">
+    <div class="wall-toolbar">
+      <div class="wall-themes">
+        <span style="font-size:13px;font-weight:700;margin-right:4px;">🖼️ 墙面材质：</span>
+        <button class="apple-pill-btn active" data-wall="linen">奶油网格</button>
+        <button class="apple-pill-btn" data-wall="peach">蜜桃渐变</button>
+        <button class="apple-pill-btn" data-wall="mint">薄荷波点</button>
+        <button class="apple-pill-btn" data-wall="star">星夜幕布</button>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="apple-pill-btn" id="scatterWallBtn">🎲 随机打散摆放</button>
+        <button class="btn-3d-mint" id="exportWallBtn">💾 导出高清照片墙海报</button>
+      </div>
+    </div>
+
+    <div class="wall-board wall-theme-linen" id="wallBoard">
+      <div class="wall-item-controls" id="wallItemControls">
+        <button class="mini-tool-btn" id="wallRotLeftBtn">⟲ 左倾</button>
+        <button class="mini-tool-btn" id="wallRotRightBtn">⟳ 右倾</button>
+        <button class="mini-tool-btn" id="wallFrontBtn">⬆️ 置顶</button>
+        <button class="mini-tool-btn" id="wallRemoveBtn" style="color:var(--coral);">🗑️ 移出</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== 右下角：会吃废片吐盲盒的小橘猫“团团” ====== -->
+  <div class="pet-dock">
+    <div class="pet-bubble" id="petBubble">喵~ 喂我吃 3 张废片，我吐稀有盲盒相纸给你！</div>
+    <div class="pet-pedestal" id="petBin" title="拖放不要的拍立得或存档到这里">
+      <span class="pet-badge" id="petCounter">吃 0 张 · 盲盒 0/3</span>
+      <svg class="pet-svg" viewBox="0 0 110 110">
+        <defs>
+          <radialGradient id="furGrad" cx="38%" cy="30%" r="68%">
+            <stop offset="0%" stop-color="#ffe1b8" />
+            <stop offset="60%" stop-color="#ffaa64" />
+            <stop offset="100%" stop-color="#e37c34" />
+          </radialGradient>
+          <radialGradient id="bellyGrad" cx="50%" cy="40%" r="60%">
+            <stop offset="0%" stop-color="#ffffff" />
+            <stop offset="100%" stop-color="#fff0df" />
+          </radialGradient>
+        </defs>
+        <path d="M84 82 Q105 68 96 50" fill="none" stroke="#f09248" stroke-width="8.5" stroke-linecap="round" />
+        <path d="M23 42 Q22 14 48 28 Z" fill="url(#furGrad)" stroke="#703d1d" stroke-width="2.4" stroke-linejoin="round" />
+        <path d="M87 42 Q88 14 62 28 Z" fill="url(#furGrad)" stroke="#703d1d" stroke-width="2.4" stroke-linejoin="round" />
+        <path d="M28 36 Q28 21 43 29 Z" fill="#ffb2bc" />
+        <path d="M82 36 Q82 21 67 29 Z" fill="#ffb2bc" />
+        <ellipse cx="55" cy="61" rx="36" ry="32" fill="url(#furGrad)" stroke="#703d1d" stroke-width="2.4" />
+        <ellipse cx="55" cy="72" rx="22" ry="16" fill="url(#bellyGrad)" />
+        <path d="M48 31 L50 39 M55 30 L55 41 M62 31 L60 39" stroke="#d46b24" stroke-width="2.6" stroke-linecap="round" />
+        <ellipse cx="31" cy="59" rx="6.5" ry="3.8" fill="#ff8998" opacity="0.72" />
+        <ellipse cx="79" cy="59" rx="6.5" ry="3.8" fill="#ff8998" opacity="0.72" />
+
+        <g class="cat-eyes-track">
+          <circle cx="40" cy="52" r="7.4" fill="#fff" stroke="#703d1d" stroke-width="1.6" />
+          <circle cx="70" cy="52" r="7.4" fill="#fff" stroke="#703d1d" stroke-width="1.6" />
+          <g id="catPupils">
+            <circle cx="40" cy="52" r="4.4" fill="#3b2010" />
+            <circle cx="70" cy="52" r="4.4" fill="#3b2010" />
+            <circle cx="38.5" cy="50.2" r="1.6" fill="#fff" />
+            <circle cx="68.5" cy="50.2" r="1.6" fill="#fff" />
+          </g>
+        </g>
+
+        <g class="cat-eyes-happy" stroke="#5c2f14" stroke-width="3" fill="none" stroke-linecap="round">
+          <path d="M33 53 Q40 45 47 53" />
+          <path d="M63 53 Q70 45 77 53" />
+        </g>
+
+        <polygon points="52,58 58,58 55,62" fill="#ff7385" />
+        <path class="cat-mouth-idle" d="M48 65 Q51.5 69 55 64 Q58.5 69 62 65" fill="none" stroke="#703d1d" stroke-width="2.3" stroke-linecap="round" />
+        <ellipse class="cat-mouth-open" cx="55" cy="71" rx="10" ry="11.5" fill="#e64b54" stroke="#703d1d" stroke-width="2.3" />
+      </svg>
+    </div>
+  </div>
+
+  <!-- 通用弹窗：手机存图 / 盲盒惊喜 -->
+  <div class="modal-backdrop" id="saveModal">
+    <div class="apple-modal">
+      <strong id="modalTitle" style="font-size:17px;color:var(--cocoa);">📸 高清成图已准备就绪</strong>
+      <img id="modalImg" alt="生成图片" />
+      <p id="modalDesc">📱 手机用户请<strong>长按上方图片</strong>，选择「保存到相册 / 存储图像」即可存入本地相册！</p>
+      <button class="btn-3d-mint" id="closeModalBtn" style="width:100%; justify-content:center;">太棒了</button>
+    </div>
+  </div>
+
+  <script>
+    // ====== 1. 全局配置与状态 ======
+    const MODELS = {
+      sx70: { name: 'POLAROID SX-70', frameW: 1080, frameH: 1310, winX: 70, winY: 72, winW: 940, winH: 940, fontSize: 44 },
+      p600: { name: 'ONESTEP 600',    frameW: 1080, frameH: 1290, winX: 76, winY: 76, winW: 928, winH: 928, fontSize: 42 },
+      mini: { name: 'INSTAX MINI',    frameW: 860,  frameH: 1280, winX: 60, winY: 66, winW: 740, winH: 960, fontSize: 38 },
+      wide: { name: 'INSTAX WIDE',    frameW: 1400, frameH: 1120, winX: 70, winY: 70, winW: 1260, winH: 810, fontSize: 42 }
+    };
+
+    const PAPERS = {
+      cream:          { bg: '#fff6e8', text: '#4a3123', border: '#f0decb', unlocked: true },
+      white:          { bg: '#ffffff', text: '#3a2820', border: '#f0e5dc', unlocked: true },
+      pink:           { bg: '#ffdbe3', text: '#6e3444', border: '#f5c2ce', unlocked: true },
+      mint:           { bg: '#d2f3e6', text: '#245443', border: '#b6e2d1', unlocked: true },
+      cocoa:          { bg: '#422b20', text: '#fff0e4', border: '#593b2d', unlocked: true },
+      box_strawberry: { bg: '#ffe8ef', text: '#8f2947', border: '#ffc4d6', unlocked: false, label: '🍓 草莓奶油波点' },
+      box_starlight:  { bg: '#322142', text: '#ffe28a', border: '#53386b', unlocked: false, label: '🌟 星空流金' },
+      box_paw:        { bg: '#fff1d9', text: '#994c1f', border: '#f5d2a4', unlocked: false, label: '🐾 团团猫爪印' },
+      box_rainbow:    { bg: '#ffffff', text: '#573659', border: '#f2d9f7', unlocked: false, label: '🌈 彩虹糖果渐变' }
+    };
+
+    const BLIND_BOX_KEYS = ['box_strawberry', 'box_starlight', 'box_paw', 'box_rainbow'];
+
+    const state = {
+      model: 'sx70',
+      style: 'sx70_warm',
+      paper: 'cream',
+      grain: true,
+      leak: false,
+      dateStamp: true,
+      caption: 'Peach Instant · 日落日记',
+      leakSeed: 0.3,
+      sourceImage: null,
+      filmRoll: [],
+      activeRollIndex: 0,
+      cameraActive: false,
+      facingMode: 'user',
+      stream: null,
+      isDeveloping: false,
+      developProgress: 1,
+      developRAF: null,
+      eatenCount: 0,
+      hasPhotoInTray: true,
+      cardMode: 'move', // move | doodle | sticker
+      brushColor: '#ff5d47',
+      doodleStrokes: [],
+      stickers: [],
+      wallItems: [],
+      wallTheme: 'linen',
+      selectedWallId: null
+    };
+
+    // DOM 引用
+    const previewCanvas = document.getElementById('previewCanvas');
+    const ctx = previewCanvas.getContext('2d');
+    const developMaskCanvas = document.getElementById('developMaskCanvas');
+    const devCtx = developMaskCanvas.getContext('2d');
+    const doodleCanvas = document.getElementById('doodleCanvas');
+    const doodleCtx = doodleCanvas.getContext('2d');
+    const stickerLayer = document.getElementById('stickerLayer');
+    const photoCard = document.getElementById('photoCard');
+    const photoGloss = document.getElementById('photoGloss');
+    const emptySlot = document.getElementById('emptySlot');
+    const printActions = document.getElementById('printActions');
+    const printStatus = document.getElementById('printStatus');
+    const cardModeBar = document.getElementById('cardModeBar');
+    const doodleTools = document.getElementById('doodleTools');
+    const stickerTools = document.getElementById('stickerTools');
+
+    const cameraVideo = document.getElementById('cameraVideo');
+    const camAlert = document.getElementById('camAlert');
+    const toggleCamBtn = document.getElementById('toggleCamBtn');
+    const flipCamBtn = document.getElementById('flipCamBtn');
+    const filmStrip = document.getElementById('filmStrip');
+    const rollCount = document.getElementById('rollCount');
+    const hudModelTag = document.getElementById('hudModelTag');
+    const flashOverlay = document.getElementById('flashOverlay');
+
+    const petBin = document.getElementById('petBin');
+    const petBubble = document.getElementById('petBubble');
+    const petCounter = document.getElementById('petCounter');
+    const blindboxProgress = document.getElementById('blindboxProgress');
+    const catPupils = document.getElementById('catPupils');
+
+    const wallBoard = document.getElementById('wallBoard');
+    const wallItemControls = document.getElementById('wallItemControls');
+    const wallCountBadge = document.getElementById('wallCountBadge');
+
+    const cachedPhotoCanvas = document.createElement('canvas');
+    let needsPixelReprocess = true;
+
+    // ====== 2. 顶部 Apple 分段切换（暗房拍摄 vs 照片墙拼图） ======
+    const studioView = document.getElementById('studioView');
+    const wallView = document.getElementById('wallView');
+
+    document.getElementById('mainNavSeg').addEventListener('click', (e) => {
+      const btn = e.target.closest('.seg-btn');
+      if (!btn) return;
+      document.querySelectorAll('#mainNavSeg .seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      const v = btn.dataset.view;
+      if (v === 'wall') {
+        studioView.classList.add('hidden');
+        wallView.classList.add('active');
+        renderWallBoard();
+      } else {
+        wallView.classList.remove('active');
+        studioView.classList.remove('hidden');
+      }
+    });
+
+    // ====== 3. 3D WebGL 拍立得相机引擎 ======
+    const stage3D = document.getElementById('camera3dStage');
+    const canvas3D = document.getElementById('camera3dCanvas');
+    let threeScene, threeCamera, threeRenderer, cameraGroup, shutterMesh, flashLight, ejectSheetMesh;
+    let lensCanvas, lensCtx, lensTex;
+    let targetRotY = 0.28, targetRotX = 0.14, currentRotY = 0.28, currentRotX = 0.14;
+    let shutterAnim = 0, ejectAnim = 0, flashAnim = 0;
+
+    function makeGrainTexture(baseHex, speckleAlpha = 0.05) {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 256;
+      const g = c.getContext('2d'); g.fillStyle = baseHex; g.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 4800; i++) {
+        g.fillStyle = Math.random() > 0.5 ? `rgba(255,255,255,${speckleAlpha})` : `rgba(120,60,30,${speckleAlpha})`;
+        g.fillRect(Math.random() * 256, Math.random() * 256, 1.8, 1.8);
+      }
+      const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; return tex;
+    }
+
+    function makeRainbowTexture() {
+      const c = document.createElement('canvas'); c.width = 256; c.height = 64;
+      const g = c.getContext('2d');
+      ['#ff594f', '#ff9b3d', '#ffd23f', '#4cd995', '#55a8ff'].forEach((col, i) => {
+        g.fillStyle = col; g.fillRect((256 / 5) * i, 0, 256 / 5 + 1, 64);
+      });
+      const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; return tex;
+    }
+
+    function createBevelBox(w, h, d, r = 0.16, bevel = 0.055) {
+      const shape = new THREE.Shape();
+      const hw = w / 2 - r, hh = h / 2 - r;
+      shape.moveTo(-hw, -h / 2); shape.lineTo(hw, -h / 2);
+      shape.quadraticCurveTo(w / 2, -h / 2, w / 2, -hh); shape.lineTo(w / 2, hh);
+      shape.quadraticCurveTo(w / 2, h / 2, hw, h / 2); shape.lineTo(-hw, h / 2);
+      shape.quadraticCurveTo(-w / 2, h / 2, -w / 2, hh); shape.lineTo(-w / 2, -hh);
+      shape.quadraticCurveTo(-w / 2, -h / 2, -hw, -h / 2);
+      const geo = new THREE.ExtrudeGeometry(shape, { depth: d, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 5 });
+      geo.center(); return geo;
+    }
+
+    function build3DCameraModel(modelKey) {
+      if (!threeScene) return;
+      if (cameraGroup) threeScene.remove(cameraGroup);
+      cameraGroup = new THREE.Group();
+
+      const themes = {
+        sx70: { upper: '#fff4ea', lower: '#b86a3c', trim: 0xf4c2a8, barrel: 0x5c3a28, metal: 0.45, rough: 0.28, isWide: false, isMini: false },
+        p600: { upper: '#fffaf0', lower: '#4e3123', trim: 0xffd5b8, barrel: 0x3b2419, metal: 0.08, rough: 0.35, isWide: false, isMini: false },
+        mini: { upper: '#c8efe0', lower: '#ffdbe3', trim: 0xffffff, barrel: 0xffffff, metal: 0.05, rough: 0.3,  isWide: false, isMini: true },
+        wide: { upper: '#6e4048', lower: '#45272d', trim: 0xf0c994, barrel: 0x3b2227, metal: 0.2,  rough: 0.38, isWide: true,  isMini: false }
+      };
+      const t = themes[modelKey] || themes.sx70;
+      const upperMat = new THREE.MeshStandardMaterial({ map: makeGrainTexture(t.upper, 0.03), roughness: t.rough, metalness: t.metal });
+      const lowerTex = makeGrainTexture(t.lower, 0.05);
+      const lowerMat = new THREE.MeshStandardMaterial({ map: lowerTex, bumpMap: lowerTex, bumpScale: 0.01, roughness: 0.55, metalness: 0.06 });
+      const barrelMat = new THREE.MeshStandardMaterial({ color: t.barrel, roughness: 0.32, metalness: 0.2 });
+      const goldTrimMat = new THREE.MeshStandardMaterial({ color: t.trim, roughness: 0.2, metalness: 0.8 });
+
+      const bodyW = t.isWide ? 3.2 : (t.isMini ? 2.38 : 2.68);
+      const bodyH = t.isWide ? 2.05 : (t.isMini ? 2.68 : 2.38);
+
+      const baseMesh = new THREE.Mesh(createBevelBox(bodyW, bodyH * 0.42, 1.85, 0.18, 0.055), lowerMat);
+      baseMesh.position.set(0, -bodyH * 0.3, 0); baseMesh.castShadow = true; baseMesh.receiveShadow = true;
+      cameraGroup.add(baseMesh);
+
+      const upperMesh = new THREE.Mesh(createBevelBox(bodyW * 0.96, bodyH * 0.64, modelKey === 'sx70' ? 1.42 : 1.56, 0.2, 0.055), upperMat);
+      upperMesh.position.set(0, bodyH * 0.18, -0.06);
+      if (modelKey === 'sx70') upperMesh.rotation.x = -0.14;
+      upperMesh.castShadow = true; upperMesh.receiveShadow = true;
+      cameraGroup.add(upperMesh);
+
+      [-1, 1].forEach(side => {
+        const lug = new THREE.Mesh(new THREE.TorusGeometry(0.11, 0.028, 14, 28), goldTrimMat);
+        lug.position.set(side * (bodyW / 2 + 0.06), bodyH * 0.05, 0); lug.rotation.y = Math.PI / 2;
+        cameraGroup.add(lug);
+      });
+
+      if (modelKey !== 'wide') {
+        const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.42, bodyH * 0.56, 0.045), new THREE.MeshStandardMaterial({ map: makeRainbowTexture(), roughness: 0.25 }));
+        stripe.position.set(0, -bodyH * 0.06, 0.79);
+        cameraGroup.add(stripe);
+      }
+
+      const lensGroup = new THREE.Group();
+      lensGroup.position.set(0, bodyH * 0.14, 0.72);
+      const outerBarrel = new THREE.Mesh(new THREE.CylinderGeometry(0.68, 0.72, 0.36, 48), barrelMat);
+      outerBarrel.rotation.x = Math.PI / 2; outerBarrel.castShadow = true; lensGroup.add(outerBarrel);
+
+      const trimRing = new THREE.Mesh(new THREE.TorusGeometry(0.58, 0.048, 20, 48), goldTrimMat);
+      trimRing.position.z = 0.17; lensGroup.add(trimRing);
+
+      const innerRing = new THREE.Mesh(new THREE.CylinderGeometry(0.53, 0.53, 0.12, 48), new THREE.MeshStandardMaterial({ color: 0x302018, roughness: 0.3 }));
+      innerRing.rotation.x = Math.PI / 2; innerRing.position.z = 0.12; lensGroup.add(innerRing);
+
+      const portalMesh = new THREE.Mesh(new THREE.CircleGeometry(0.49, 48), new THREE.MeshBasicMaterial({ map: lensTex }));
+      portalMesh.position.z = 0.185; lensGroup.add(portalMesh);
+
+      const glassDome = new THREE.Mesh(
+        new THREE.SphereGeometry(0.5, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.38),
+        new THREE.MeshPhysicalMaterial({ color: 0xffeef8, transparent: true, opacity: 0.22, roughness: 0.04, reflectivity: 0.95 })
+      );
+      glassDome.rotation.x = Math.PI / 2; glassDome.position.z = -0.02; lensGroup.add(glassDome);
+      cameraGroup.add(lensGroup);
+
+      if (modelKey === 'mini') {
+        const selfieMirror = new THREE.Mesh(new THREE.CircleGeometry(0.11, 24), new THREE.MeshStandardMaterial({ color: 0xffffff, metalness: 0.95, roughness: 0.05 }));
+        selfieMirror.position.set(0.74, bodyH * 0.14, 0.78); cameraGroup.add(selfieMirror);
+      }
+
+      const flashBox = new THREE.Mesh(createBevelBox(0.62, 0.36, 0.26, 0.07, 0.02), barrelMat);
+      flashBox.position.set(-bodyW * 0.31, bodyH * 0.38, 0.68); cameraGroup.add(flashBox);
+      const flashReflector = new THREE.Mesh(new THREE.PlaneGeometry(0.48, 0.24), new THREE.MeshStandardMaterial({ color: 0xfff8f0, emissive: 0x44332a, roughness: 0.18, metalness: 0.8 }));
+      flashReflector.position.set(-bodyW * 0.31, bodyH * 0.38, 0.835); cameraGroup.add(flashReflector);
+
+      const vfBox = new THREE.Mesh(createBevelBox(0.36, 0.34, 0.24, 0.07, 0.02), barrelMat);
+      vfBox.position.set(bodyW * 0.32, bodyH * 0.38, 0.68); cameraGroup.add(vfBox);
+      const vfGlass = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.2), new THREE.MeshStandardMaterial({ color: 0x457b9d, roughness: 0.1, metalness: 0.85 }));
+      vfGlass.position.set(bodyW * 0.32, bodyH * 0.38, 0.825); cameraGroup.add(vfGlass);
+
+      const dialKnob = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.15, 0.14, 24), goldTrimMat);
+      dialKnob.rotation.x = Math.PI / 2; dialKnob.position.set(-bodyW * 0.34, -bodyH * 0.02, 0.79); cameraGroup.add(dialKnob);
+
+      const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.27, 0.12, 32), goldTrimMat);
+      collar.rotation.x = Math.PI / 2; collar.position.set(bodyW * 0.34, -bodyH * 0.02, 0.78); cameraGroup.add(collar);
+
+      shutterMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.21, 0.18, 32), new THREE.MeshStandardMaterial({ color: 0xff5a42, roughness: 0.24, metalness: 0.08 }));
+      shutterMesh.rotation.x = Math.PI / 2; shutterMesh.position.set(bodyW * 0.34, -bodyH * 0.02, 0.85); cameraGroup.add(shutterMesh);
+
+      const slotMesh = new THREE.Mesh(new THREE.BoxGeometry(bodyW * 0.78, 0.08, 0.12), new THREE.MeshBasicMaterial({ color: 0x2a1810 }));
+      slotMesh.position.set(0, -bodyH * 0.36, 0.93); cameraGroup.add(slotMesh);
+
+      ejectSheetMesh = new THREE.Mesh(new THREE.BoxGeometry(1.75, 2.05, 0.025), new THREE.MeshStandardMaterial({ color: 0xfff8ee, roughness: 0.35 }));
+      ejectSheetMesh.position.set(0, -bodyH * 0.36, 0.35); ejectSheetMesh.rotation.x = Math.PI / 2 - 0.18; ejectSheetMesh.visible = false;
+      cameraGroup.add(ejectSheetMesh);
+
+      threeScene.add(cameraGroup);
+    }
+
+    function init3DStage() {
+      if (typeof THREE === 'undefined') {
+        stage3D.innerHTML = '<div style="display:flex;height:100%;align-items:center;justify-content:center;color:#8a6250;font-size:13px;font-weight:600;">3D 引擎离线模式（联网可开启实时 3D 相机模型）</div>';
+        return;
+      }
+      const w = stage3D.clientWidth, h = stage3D.clientHeight;
+      threeScene = new THREE.Scene();
+      threeCamera = new THREE.PerspectiveCamera(34, w / h, 0.1, 100);
+      threeCamera.position.set(0, 0.25, 6.2);
+
+      threeRenderer = new THREE.WebGLRenderer({ canvas: canvas3D, antialias: true, alpha: true });
+      threeRenderer.setSize(w, h);
+      threeRenderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      threeRenderer.shadowMap.enabled = true;
+      threeRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      threeRenderer.outputEncoding = THREE.sRGBEncoding;
+
+      threeScene.add(new THREE.HemisphereLight(0xfffdf9, 0xf2c8b6, 1.28));
+      const keyLight = new THREE.DirectionalLight(0xfff5e8, 1.05);
+      keyLight.position.set(4, 6, 5); keyLight.castShadow = true; threeScene.add(keyLight);
+      const fillLight = new THREE.DirectionalLight(0xffe0ee, 0.55);
+      fillLight.position.set(-5, 2.5, 3); threeScene.add(fillLight);
+
+      flashLight = new THREE.PointLight(0xffffff, 0, 12);
+      flashLight.position.set(-1.1, 1.2, 2.5); threeScene.add(flashLight);
+
+      const floor = new THREE.Mesh(new THREE.PlaneGeometry(14, 14), new THREE.ShadowMaterial({ color: 0xa65c3c, opacity: 0.14 }));
+      floor.rotation.x = -Math.PI / 2; floor.position.y = -1.75; floor.receiveShadow = true; threeScene.add(floor);
+
+      lensCanvas = document.createElement('canvas'); lensCanvas.width = 512; lensCanvas.height = 512;
+      lensCtx = lensCanvas.getContext('2d');
+      lensTex = new THREE.CanvasTexture(lensCanvas); lensTex.encoding = THREE.sRGBEncoding;
+
+      build3DCameraModel(state.model);
+
+      let isOrbiting = false, prevX = 0, prevY = 0, orbitMoved = 0;
+      const raycaster = new THREE.Raycaster(), pointer = new THREE.Vector2();
+
+      canvas3D.addEventListener('pointerdown', (e) => {
+        isOrbiting = true; orbitMoved = 0; prevX = e.clientX; prevY = e.clientY;
+        canvas3D.setPointerCapture(e.pointerId);
+      });
+      canvas3D.addEventListener('pointermove', (e) => {
+        const rect = canvas3D.getBoundingClientRect();
+        pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+        if (isOrbiting) {
+          const dx = e.clientX - prevX, dy = e.clientY - prevY;
+          orbitMoved += Math.hypot(dx, dy);
+          targetRotY += dx * 0.011;
+          targetRotX = Math.max(-0.65, Math.min(0.65, targetRotX + dy * 0.009));
+          prevX = e.clientX; prevY = e.clientY;
+        } else if (shutterMesh) {
+          raycaster.setFromCamera(pointer, threeCamera);
+          stage3D.style.cursor = raycaster.intersectObject(shutterMesh).length ? 'pointer' : 'grab';
+        }
+      });
+      canvas3D.addEventListener('pointerup', (e) => {
+        if (!isOrbiting) return; isOrbiting = false;
+        if (orbitMoved < 6 && shutterMesh) {
+          const rect = canvas3D.getBoundingClientRect();
+          pointer.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+          pointer.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+          raycaster.setFromCamera(pointer, threeCamera);
+          if (raycaster.intersectObject(shutterMesh).length > 0) fireShutter();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        if (!stage3D.clientWidth) return;
+        threeCamera.aspect = stage3D.clientWidth / stage3D.clientHeight;
+        threeCamera.updateProjectionMatrix();
+        threeRenderer.setSize(stage3D.clientWidth, stage3D.clientHeight);
+      });
+
+      function animate(time) {
+        requestAnimationFrame(animate);
+        updateLensTexture();
+        if (cameraGroup) {
+          currentRotY += (targetRotY - currentRotY) * 0.1;
+          currentRotX += (targetRotX - currentRotX) * 0.1;
+          cameraGroup.rotation.y = currentRotY; cameraGroup.rotation.x = currentRotX;
+          cameraGroup.position.y = Math.sin(time * 0.0018) * 0.045;
+        }
+        if (shutterAnim > 0 && shutterMesh) {
+          shutterAnim = Math.max(0, shutterAnim - 0.08);
+          shutterMesh.position.z = 0.85 - Math.sin(shutterAnim * Math.PI) * 0.09;
+        }
+        if (flashAnim > 0) {
+          flashAnim = Math.max(0, flashAnim - 0.09);
+          flashLight.intensity = flashAnim * 5;
+        }
+        if (ejectAnim > 0 && ejectSheetMesh) {
+          ejectSheetMesh.visible = true;
+          ejectAnim = Math.max(0, ejectAnim - 0.025);
+          ejectSheetMesh.position.z = 0.35 + (1 - ejectAnim) * 1.45;
+          if (ejectAnim === 0) ejectSheetMesh.visible = false;
+        }
+        threeRenderer.render(threeScene, threeCamera);
+      }
+      requestAnimationFrame(animate);
+    }
+
+    function updateLensTexture() {
+      if (!lensCtx || !lensTex) return;
+      const src = state.cameraActive && cameraVideo.readyState >= 2 ? cameraVideo : state.sourceImage;
+      if (!src) { lensCtx.fillStyle = '#ffe9dc'; lensCtx.fillRect(0, 0, 512, 512); lensTex.needsUpdate = true; return; }
+      const sw = src.videoWidth || src.naturalWidth || src.width, sh = src.videoHeight || src.naturalHeight || src.height;
+      if (!sw || !sh) return;
+      const minSide = Math.min(sw, sh);
+      lensCtx.save();
+      if (state.cameraActive && state.facingMode === 'user') { lensCtx.translate(512, 0); lensCtx.scale(-1, 1); }
+      lensCtx.drawImage(src, (sw - minSide) / 2, (sh - minSide) / 2, minSide, minSide, 0, 0, 512, 512);
+      lensCtx.restore();
+      const grad = lensCtx.createRadialGradient(256, 256, 130, 256, 256, 256);
+      grad.addColorStop(0, 'rgba(0,0,0,0)'); grad.addColorStop(1, 'rgba(60,25,15,0.35)');
+      lensCtx.fillStyle = grad; lensCtx.fillRect(0, 0, 512, 512);
+      lensTex.needsUpdate = true;
+    }
+
+    document.getElementById('resetOrbitBtn').addEventListener('click', () => { targetRotY = 0.28; targetRotX = 0.14; });
+
+    // ====== 4. 12款滤镜算法 + 盲盒相纸边框渲染 ======
+    function processPhotoWindow() {
+      const m = MODELS[state.model];
+      const w = m.winW, h = m.winH;
+      cachedPhotoCanvas.width = w; cachedPhotoCanvas.height = h;
+      const pctx = cachedPhotoCanvas.getContext('2d');
+      const img = state.sourceImage;
+      if (!img) return;
+
+      const imgW = img.naturalWidth || img.width, imgH = img.naturalHeight || img.height;
+      const targetRatio = w / h, imgRatio = imgW / imgH;
+      let sx = 0, sy = 0, sw = imgW, sh = imgH;
+      if (imgRatio > targetRatio) { sw = imgH * targetRatio; sx = (imgW - sw) / 2; }
+      else { sh = imgW / targetRatio; sy = (imgH - sh) / 2; }
+      pctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+
+      const imgData = pctx.getImageData(0, 0, w, h);
+      const d = imgData.data;
+      const st = state.style;
+      const useGrain = state.grain;
+
+      for (let i = 0; i < d.length; i += 4) {
+        let r = d[i], g = d[i + 1], b = d[i + 2];
+        const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+
+        if (st === 'sx70_warm') {
+          r = (r * 1.04 + 14) * 0.9 + 18; g = (g * 0.99 + 10) * 0.9 + 15; b = (b * 0.84 + 12) * 0.9 + 10;
+        } else if (st === 'p600_cool') {
+          r = (r - 128) * 1.15 + 128; g = (g - 128) * 1.15 + 128; b = (b - 128) * 1.15 + 128;
+          if (lum < 115) { g += 9; b += 16; } else { r += 10; }
+        } else if (st === 'expired_98') {
+          r = r * 0.92 + 26; g = g * 0.86 + 18; b = b * 0.95 + 28;
+        } else if (st === 'itype_clean') {
+          r = (r - 128) * 1.08 + 132; g = (g - 128) * 1.08 + 131; b = (b - 128) * 1.08 + 129;
+        } else if (st === 'instax_fresh') {
+          r = r * 1.03 + 14; g = g * 1.05 + 15; b = b * 1.06 + 16;
+        } else if (st === 'peach_soda') {
+          r = r * 0.98 + 24; g = g * 0.94 + 16; b = b * 0.92 + 14;
+        } else if (st === 'fuji_forest') {
+          r = r * 0.94 + 6; g = g * 1.06 + 14; b = b * 1.02 + 12;
+        } else if (st === 'creamy_morandi') {
+          r = lum * 0.25 + r * 0.65 + 24; g = lum * 0.25 + g * 0.65 + 22; b = lum * 0.25 + b * 0.65 + 20;
+        } else if (st === 'kodak_gold') {
+          r = (r - 128) * 1.12 + 142; g = (g - 128) * 1.08 + 132; b = (b - 128) * 0.95 + 110;
+        } else if (st === 'hongkong_800t') {
+          if (lum < 120) { r -= 10; g += 8; b += 22; } else { r += 14; g -= 4; }
+          r = (r - 128) * 1.14 + 128; g = (g - 128) * 1.14 + 128; b = (b - 128) * 1.14 + 128;
+        } else if (st === 'bw_street') {
+          const bw = (lum - 128) * 1.28 + 130;
+          r = bw + 4; g = bw + 1; b = bw - 4;
+        } else if (st === 'sepia_tea') {
+          const sp = lum * 0.92 + 18;
+          r = sp + 26; g = sp + 8; b = sp - 18;
+        }
+
+        if (useGrain) {
+          const noise = (Math.random() - 0.5) * 16;
+          r += noise; g += noise; b += noise;
+        }
+        d[i] = r < 0 ? 0 : (r > 255 ? 255 : r);
+        d[i + 1] = g < 0 ? 0 : (g > 255 ? 255 : g);
+        d[i + 2] = b < 0 ? 0 : (b > 255 ? 255 : b);
+      }
+      pctx.putImageData(imgData, 0, 0);
+
+      if (state.grain) {
+        const vig = pctx.createRadialGradient(w / 2, h / 2, w * 0.34, w / 2, h / 2, w * 0.78);
+        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, 'rgba(40,18,12,0.28)');
+        pctx.fillStyle = vig; pctx.fillRect(0, 0, w, h);
+      }
+
+      if (state.leak) {
+        pctx.save(); pctx.globalCompositeOperation = 'screen';
+        const lx = state.leakSeed > 0.5 ? w * 0.92 : w * 0.08, ly = ((state.leakSeed * 1.7) % 1) * h;
+        const leakGrad = pctx.createRadialGradient(lx, ly, 10, lx, ly, w * 0.72);
+        leakGrad.addColorStop(0, 'rgba(255, 95, 45, 0.58)');
+        leakGrad.addColorStop(0.42, 'rgba(255, 185, 85, 0.28)');
+        leakGrad.addColorStop(1, 'rgba(255, 120, 50, 0)');
+        pctx.fillStyle = leakGrad; pctx.fillRect(0, 0, w, h);
+        pctx.restore();
+      }
+
+      if (state.dateStamp) {
+        const now = new Date();
+        const dateStr = `'${String(now.getFullYear()).slice(-2)} ${String(now.getMonth() + 1).padStart(2, '0')} ${String(now.getDate()).padStart(2, '0')}`;
+        pctx.save();
+        pctx.font = `bold ${Math.round(w * 0.036)}px "Courier New", monospace`;
+        pctx.textAlign = 'right';
+        pctx.fillStyle = 'rgba(255, 118, 42, 0.88)';
+        pctx.shadowColor = 'rgba(255, 65, 0, 0.8)'; pctx.shadowBlur = 8;
+        pctx.fillText(dateStr, w - w * 0.045, h - h * 0.045);
+        pctx.restore();
+      }
+      needsPixelReprocess = false;
+    }
+
+    // 绘制稀有盲盒相纸专属图案
+    function drawBlindBoxPattern(targetCtx, paperKey, fw, fh) {
+      if (paperKey === 'box_rainbow') {
+        const grad = targetCtx.createLinearGradient(0, 0, fw, fh);
+        grad.addColorStop(0, '#ffd4db'); grad.addColorStop(0.33, '#fff0c7');
+        grad.addColorStop(0.66, '#ccf5e7'); grad.addColorStop(1, '#d8e3ff');
+        targetCtx.fillStyle = grad;
+        targetCtx.fillRect(0, 0, fw, fh);
+      } else if (paperKey === 'box_strawberry') {
+        targetCtx.fillStyle = '#ff9bb3';
+        for (let y = 32; y < fh; y += 90) {
+          for (let x = 35; x < fw; x += 95) {
+            targetCtx.beginPath();
+            targetCtx.arc(x + ((y % 180 === 0) ? 25 : 0), y, 9, 0, Math.PI * 2);
+            targetCtx.fill();
+          }
+        }
+        targetCtx.font = '38px sans-serif';
+        targetCtx.fillText('🍓', 42, fh - 48);
+        targetCtx.fillText('🍓', fw - 82, fh - 48);
+      } else if (paperKey === 'box_starlight') {
+        targetCtx.fillStyle = '#ffd97a';
+        targetCtx.font = '30px sans-serif';
+        [[40, 52], [fw - 70, 56], [42, fh - 50], [fw - 76, fh - 52], [fw * 0.2, fh - 45], [fw * 0.8, fh - 45]].forEach(([x, y], idx) => {
+          targetCtx.fillText(idx % 2 === 0 ? '✨' : '⭐', x, y);
+        });
+      } else if (paperKey === 'box_paw') {
+        targetCtx.font = '34px sans-serif';
+        [[36, 52], [fw - 72, 54], [40, fh - 46], [fw - 78, fh - 46]].forEach(([x, y]) => {
+          targetCtx.fillText('🐾', x, y);
+        });
+      }
+    }
+
+    function renderPolaroid() {
+      if (!state.sourceImage) return;
+      const m = MODELS[state.model];
+      const paper = PAPERS[state.paper];
+      if (needsPixelReprocess) processPhotoWindow();
+
+      previewCanvas.width = m.frameW;
+      previewCanvas.height = m.frameH;
+
+      // 同步调整涂鸦与显影遮罩画布分辨率
+      if (doodleCanvas.width !== m.frameW || doodleCanvas.height !== m.frameH) {
+        doodleCanvas.width = m.frameW; doodleCanvas.height = m.frameH;
+        redrawDoodles();
+      }
+      if (developMaskCanvas.width !== m.frameW || developMaskCanvas.height !== m.frameH) {
+        developMaskCanvas.width = m.frameW; developMaskCanvas.height = m.frameH;
+      }
+
+      ctx.fillStyle = paper.bg;
+      ctx.fillRect(0, 0, m.frameW, m.frameH);
+      drawBlindBoxPattern(ctx, state.paper, m.frameW, m.frameH);
+
+      ctx.strokeStyle = paper.border; ctx.lineWidth = 4;
+      ctx.strokeRect(2, 2, m.frameW - 4, m.frameH - 4);
+
+      ctx.drawImage(cachedPhotoCanvas, m.winX, m.winY);
+
+      ctx.strokeStyle = 'rgba(90, 50, 30, 0.1)'; ctx.lineWidth = 3;
+      ctx.strokeRect(m.winX, m.winY, m.winW, m.winH);
+
+      if (state.caption.trim()) {
+        const bottomCenterY = m.winY + m.winH + (m.frameH - (m.winY + m.winH)) * 0.54;
+        ctx.save();
+        ctx.fillStyle = paper.text;
+        ctx.font = `500 ${m.fontSize}px "Bradley Hand", "Segoe Print", "STKaiti", "KaiTi", "Comic Sans MS", cursive`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(state.caption, m.frameW / 2, bottomCenterY, m.frameW - 120);
+        ctx.restore();
+      }
+    }
+
+    // 合成最终高清图（底图 + 手绘涂鸦 + 贴纸）用于存相册 & 贴照片墙
+    function exportCompositeCanvas() {
+      const m = MODELS[state.model];
+      const out = document.createElement('canvas');
+      out.width = m.frameW; out.height = m.frameH;
+      const octx = out.getContext('2d');
+
+      octx.drawImage(previewCanvas, 0, 0);
+      octx.drawImage(doodleCanvas, 0, 0);
+
+      // 绘制所有贴纸
+      state.stickers.forEach(st => {
+        octx.save();
+        octx.font = `${Math.round(m.frameW * 0.095)}px sans-serif`;
+        octx.textAlign = 'center';
+        octx.textBaseline = 'middle';
+        octx.fillText(st.emoji, st.xPct * m.frameW, st.yPct * m.frameH);
+        octx.restore();
+      });
+
+      return out;
+    }
+
+    // ====== 5. 局部擦拭显影逻辑 (Wipe-to-Develop) ======
+    function resetDevelopFog() {
+      const m = MODELS[state.model];
+      developMaskCanvas.width = m.frameW;
+      developMaskCanvas.height = m.frameH;
+      devCtx.clearRect(0, 0, m.frameW, m.frameH);
+      devCtx.fillStyle = 'rgba(28, 18, 14, 0.94)';
+      devCtx.fillRect(m.winX, m.winY, m.winW, m.winH);
+      developMaskCanvas.style.opacity = '1';
+      developMaskCanvas.style.display = 'block';
+    }
+
+    function wipeDevelopAt(clientX, clientY) {
+      if (!state.isDeveloping) return;
+      const rect = developMaskCanvas.getBoundingClientRect();
+      const x = (clientX - rect.left) * (developMaskCanvas.width / rect.width);
+      const y = (clientY - rect.top) * (developMaskCanvas.height / rect.height);
+      const radius = developMaskCanvas.width * 0.13;
+
+      devCtx.save();
+      devCtx.globalCompositeOperation = 'destination-out';
+      const grad = devCtx.createRadialGradient(x, y, radius * 0.2, x, y, radius);
+      grad.addColorStop(0, 'rgba(0,0,0,0.85)');
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      devCtx.fillStyle = grad;
+      devCtx.beginPath();
+      devCtx.arc(x, y, radius, 0, Math.PI * 2);
+      devCtx.fill();
+      devCtx.restore();
+
+      // 擦拭也略微加快总显影进度
+      state.developProgress = Math.min(1, state.developProgress + 0.012);
+    }
+
+    function startDevelopingProcess() {
+      cancelAnimationFrame(state.developRAF);
+      resetDevelopFog();
+      state.isDeveloping = true;
+      state.developProgress = 0;
+      printStatus.textContent = '🖐️ 显影中：用手指在黑屏上摩擦搓热，局部就会先亮出来哦！';
+
+      let lastT = performance.now();
+      function step(now) {
+        const dt = (now - lastT) / 1000;
+        lastT = now;
+        // 约 7.5 秒自然显影完毕，如果一直摩擦会更快
+        state.developProgress = Math.min(1, state.developProgress + dt * 0.14);
+        developMaskCanvas.style.opacity = String(1 - Math.pow(state.developProgress, 1.5));
+
+        if (state.developProgress >= 1) {
+          state.isDeveloping = false;
+          developMaskCanvas.style.display = 'none';
+          printStatus.textContent = '✨ 显影完成！可切换手绘涂鸦/贴纸，或拖给团团吃掉';
+        } else {
+          state.developRAF = requestAnimationFrame(step);
+        }
+      }
+      state.developRAF = requestAnimationFrame(step);
+    }
+
+    // ====== 6. 卡片模式切换：擦拭拖喂 / 涂鸦 / 贴纸 ======
+    document.getElementById('cardInteractionSeg').addEventListener('click', (e) => {
+      const btn = e.target.closest('.seg-btn');
+      if (!btn) return;
+      document.querySelectorAll('#cardInteractionSeg .seg-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      state.cardMode = btn.dataset.mode;
+
+      photoCard.className = `photo-card mode-${state.cardMode}`;
+      doodleTools.classList.toggle('show', state.cardMode === 'doodle');
+      stickerTools.classList.toggle('show', state.cardMode === 'sticker');
+    });
+
+    // 涂鸦功能
+    document.querySelectorAll('#doodleTools .brush-dot').forEach(dot => {
+      dot.addEventListener('click', () => {
+        document.querySelectorAll('#doodleTools .brush-dot').forEach(d => d.classList.remove('active'));
+        dot.classList.add('active');
+        state.brushColor = dot.dataset.color;
+      });
+    });
+
+    let isDoodling = false, currentStroke = null;
+
+    function redrawDoodles() {
+      doodleCtx.clearRect(0, 0, doodleCanvas.width, doodleCanvas.height);
+      doodleCtx.lineCap = 'round';
+      doodleCtx.lineJoin = 'round';
+      state.doodleStrokes.forEach(s => {
+        if (s.points.length < 2) return;
+        doodleCtx.strokeStyle = s.color;
+        doodleCtx.lineWidth = doodleCanvas.width * 0.013;
+        doodleCtx.beginPath();
+        doodleCtx.moveTo(s.points[0].x * doodleCanvas.width, s.points[0].y * doodleCanvas.height);
+        for (let i = 1; i < s.points.length; i++) {
+          doodleCtx.lineTo(s.points[i].x * doodleCanvas.width, s.points[i].y * doodleCanvas.height);
+        }
+        doodleCtx.stroke();
+      });
+    }
+
+    doodleCanvas.addEventListener('pointerdown', (e) => {
+      if (state.cardMode !== 'doodle') return;
+      isDoodling = true;
+      const r = doodleCanvas.getBoundingClientRect();
+      currentStroke = {
+        color: state.brushColor,
+        points: [{ x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }]
+      };
+      state.doodleStrokes.push(currentStroke);
+      doodleCanvas.setPointerCapture(e.pointerId);
+    });
+
+    doodleCanvas.addEventListener('pointermove', (e) => {
+      if (!isDoodling || !currentStroke) return;
+      const r = doodleCanvas.getBoundingClientRect();
+      currentStroke.points.push({ x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height });
+      redrawDoodles();
+    });
+
+    doodleCanvas.addEventListener('pointerup', () => { isDoodling = false; currentStroke = null; });
+
+    document.getElementById('undoDoodleBtn').addEventListener('click', () => {
+      state.doodleStrokes.pop(); redrawDoodles();
+    });
+    document.getElementById('clearDoodleBtn').addEventListener('click', () => {
+      state.doodleStrokes = []; redrawDoodles();
+    });
+
+    // 贴纸功能
+    function renderStickers() {
+      stickerLayer.innerHTML = '';
+      state.stickers.forEach((st, idx) => {
+        const el = document.createElement('div');
+        el.className = 'placed-sticker';
+        el.style.left = `${st.xPct * 100}%`;
+        el.style.top = `${st.yPct * 100}%`;
+        el.innerHTML = `<span>${st.emoji}</span><span class="st-del" title="移除">×</span>`;
+
+        el.querySelector('.st-del').addEventListener('pointerdown', (e) => e.stopPropagation());
+        el.querySelector('.st-del').addEventListener('click', (e) => {
+          e.stopPropagation();
+          state.stickers.splice(idx, 1);
+          renderStickers();
+        });
+
+        let stDrag = false;
+        el.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          stDrag = true;
+          el.setPointerCapture(e.pointerId);
+        });
+        el.addEventListener('pointermove', (e) => {
+          if (!stDrag) return;
+          const r = stickerLayer.getBoundingClientRect();
+          st.xPct = Math.max(0.06, Math.min(0.94, (e.clientX - r.left) / r.width));
+          st.yPct = Math.max(0.06, Math.min(0.94, (e.clientY - r.top) / r.height));
+          el.style.left = `${st.xPct * 100}%`;
+          el.style.top = `${st.yPct * 100}%`;
+        });
+        el.addEventListener('pointerup', () => { stDrag = false; });
+
+        stickerLayer.appendChild(el);
+      });
+    }
+
+    document.querySelectorAll('#stickerTools .sticker-pick').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.stickers.push({
+          emoji: btn.dataset.st,
+          xPct: 0.25 + Math.random() * 0.5,
+          yPct: 0.25 + Math.random() * 0.5
+        });
+        renderStickers();
+      });
+    });
+
+    document.getElementById('clearStickersBtn').addEventListener('click', () => {
+      state.stickers = []; renderStickers();
+    });
+
+    // ====== 7. 团团吃废片 + 吐盲盒边框系统 ======
+    function isOverPet(x, y) {
+      const r = petBin.getBoundingClientRect();
+      return x >= r.left - 32 && x <= r.right + 32 && y >= r.top - 32 && y <= r.bottom + 32;
+    }
+
+    function spawnPetParticles() {
+      const r = petBin.getBoundingClientRect();
+      const icons = ['💖', '✨', '🐾', '🧡', '🎁'];
+      for (let i = 0; i < 6; i++) {
+        const p = document.createElement('span');
+        p.className = 'pet-particle'; p.textContent = icons[i % icons.length];
+        p.style.left = `${r.left + r.width / 2 + (Math.random() - 0.5) * 65}px`;
+        p.style.top = `${r.top + 12 + (Math.random() - 0.5) * 20}px`;
+        document.body.appendChild(p);
+        setTimeout(() => p.remove(), 950);
+      }
+    }
+
+    function unlockNextBlindBox() {
+      const nextKey = BLIND_BOX_KEYS.find(k => !PAPERS[k].unlocked);
+      if (!nextKey) return null;
+      PAPERS[nextKey].unlocked = true;
+
+      const chip = document.querySelector(`.swatch-chip[data-paper="${nextKey}"]`);
+      if (chip) {
+        chip.classList.remove('locked');
+        const circle = chip.querySelector('.swatch-circle');
+        if (circle) circle.textContent = nextKey === 'box_strawberry' ? '🍓' : (nextKey === 'box_starlight' ? '🌟' : (nextKey === 'box_paw' ? '🐾' : '🌈'));
+      }
+      return nextKey;
+    }
+
+    function triggerPetEatEffect() {
+      playChompSound();
+      spawnPetParticles();
+      state.eatenCount += 1;
+      const mod = state.eatenCount % 3;
+      const remaining = 3 - mod;
+
+      petBin.classList.remove('pet-hungry', 'pet-eating');
+      void petBin.offsetWidth;
+      petBin.classList.add('pet-eating');
+
+      let unlockedKey = null;
+      if (mod === 0) unlockedKey = unlockNextBlindBox();
+
+      const hasMoreBoxes = BLIND_BOX_KEYS.some(k => !PAPERS[k].unlocked);
+      petCounter.textContent = hasMoreBoxes
+        ? `吃 ${state.eatenCount} 张 · 盲盒 ${mod}/3`
+        : `吃 ${state.eatenCount} 张 · 盲盒全解锁`;
+      blindboxProgress.textContent = hasMoreBoxes ? `下个盲盒: ${mod}/3` : `🎉 盲盒已全解锁`;
+
+      if (unlockedKey) {
+        const label = PAPERS[unlockedKey].label;
+        petBubble.textContent = `嗝~ 吐出隐藏边框：【${label}】！已自动帮你换上！`;
+        // 自动帮用户装备新盲盒并弹出惊喜提示
+        state.paper = unlockedKey;
+        document.querySelectorAll('#paperGroup .swatch-chip').forEach(c => c.classList.toggle('active', c.dataset.paper === unlockedKey));
+        renderPolaroid();
+        showGiftModal(label);
+      } else {
+        petBubble.textContent = hasMoreBoxes
+          ? `啊呜~ 真香！再吃 ${remaining} 张就能吐出稀有相纸盲盒啦！`
+          : '嚼嚼嚼~ 团团吃饱了，所有盲盒相纸都已经送给你啦！';
+      }
+
+      setTimeout(() => petBin.classList.remove('pet-eating'), 900);
+    }
+
+    function showGiftModal(label) {
+      document.getElementById('modalTitle').textContent = '🎁 团团吐出了盲盒相纸！';
+      document.getElementById('modalImg').src = exportCompositeCanvas().toDataURL('image/png');
+      document.getElementById('modalDesc').innerHTML = `恭喜解锁稀有相纸边框：<strong>${label}</strong>！已为你自动换上并在右侧边框栏解锁。`;
+      document.getElementById('saveModal').classList.add('open');
+    }
+
+    // 眼珠实时追踪
+    window.addEventListener('pointermove', (e) => {
+      const rect = petBin.getBoundingClientRect();
+      const petCx = rect.left + rect.width / 2, petCy = rect.top + rect.height / 2;
+      const angle = Math.atan2(e.clientY - petCy, e.clientX - petCx);
+      const dist = Math.min(2.4, Math.hypot(e.clientX - petCx, e.clientY - petCy) / 90);
+      catPupils.setAttribute('transform', `translate(${Math.cos(angle) * dist}, ${Math.sin(angle) * dist})`);
+    });
+
+    // 相片手势：显影中擦拭搓热 vs 显影后拖拽喂猫
+    let isDraggingCard = false, cardStartX = 0, cardStartY = 0, cardMoved = 0;
+
+    photoCard.addEventListener('pointerdown', (e) => {
+      if (!state.hasPhotoInTray || state.cardMode !== 'move') return;
+      isDraggingCard = true; cardMoved = 0;
+      cardStartX = e.clientX; cardStartY = e.clientY;
+      photoCard.classList.remove('ejecting');
+      if (!state.isDeveloping) photoCard.classList.add('dragging');
+      photoCard.setPointerCapture(e.pointerId);
+    });
+
+    photoCard.addEventListener('pointermove', (e) => {
+      if (!isDraggingCard || state.cardMode !== 'move') return;
+
+      // 如果正在显影中，手指在相片上摩擦 -> 局部擦拭显影！
+      if (state.isDeveloping) {
+        wipeDevelopAt(e.clientX, e.clientY);
+        return;
+      }
+
+      const dx = e.clientX - cardStartX, dy = e.clientY - cardStartY;
+      cardMoved = Math.hypot(dx, dy);
+      if (cardMoved > 6) {
+        const rot = Math.max(-18, Math.min(18, dx * 0.05));
+        const over = isOverPet(e.clientX, e.clientY);
+        photoCard.style.transform = `translate(${dx}px, ${dy}px) rotate(${rot}deg) scale(${over ? 0.42 : 0.9})`;
+        if (over) {
+          petBin.classList.add('pet-hungry');
+          petBubble.textContent = '啊呜！快放到我嘴里~';
+        } else {
+          petBin.classList.remove('pet-hungry');
+        }
+      }
+    });
+
+    photoCard.addEventListener('pointerup', (e) => {
+      if (!isDraggingCard || state.cardMode !== 'move') return;
+      isDraggingCard = false;
+      photoCard.classList.remove('dragging');
+      petBin.classList.remove('pet-hungry');
+
+      if (state.isDeveloping) return;
+
+      if (cardMoved < 8) {
+        photoCard.style.transform = '';
+        photoCard.classList.remove('shaking');
+        void photoCard.offsetWidth;
+        photoCard.classList.add('shaking');
+      } else if (isOverPet(e.clientX, e.clientY)) {
+        triggerPetEatEffect();
+        hidePhotoInTray(true);
+      } else {
+        photoCard.style.transform = '';
+      }
+    });
+
+    document.getElementById('feedBtn').addEventListener('click', () => {
+      if (!state.hasPhotoInTray) return;
+      triggerPetEatEffect();
+      hidePhotoInTray(true);
+    });
+
+    // ====== 8. 照片存档架（点击 / × 删除 / 直接拖拽喂猫） ======
+    function createSampleDataUrl() {
+      const c = document.createElement('canvas'); c.width = 1000; c.height = 1000;
+      const g = c.getContext('2d');
+      const sky = g.createLinearGradient(0, 0, 0, 820);
+      sky.addColorStop(0, '#6bb8e8'); sky.addColorStop(0.48, '#ffa69e');
+      sky.addColorStop(0.84, '#ffd289'); sky.addColorStop(1, '#fff0b8');
+      g.fillStyle = sky; g.fillRect(0, 0, 1000, 1000);
+      const sun = g.createRadialGradient(540, 450, 15, 540, 450, 195);
+      sun.addColorStop(0, '#fffdf0'); sun.addColorStop(0.45, 'rgba(255,220,145,0.9)'); sun.addColorStop(1, 'rgba(255,180,120,0)');
+      g.fillStyle = sun; g.beginPath(); g.arc(540, 450, 195, 0, Math.PI * 2); g.fill();
+      g.fillStyle = '#9c6d89'; g.beginPath(); g.moveTo(0, 690); g.quadraticCurveTo(260, 550, 520, 660); g.quadraticCurveTo(790, 535, 1000, 650); g.lineTo(1000, 1000); g.lineTo(0, 1000); g.fill();
+      g.fillStyle = '#5c3b4c'; g.beginPath(); g.moveTo(0, 770); g.quadraticCurveTo(340, 700, 670, 780); g.quadraticCurveTo(860, 725, 1000, 770); g.lineTo(1000, 1000); g.lineTo(0, 1000); g.fill();
+      return c.toDataURL('image/png');
+    }
+
+    function addPhotoToRoll(dataUrl, label) {
+      const img = new Image();
+      img.onload = () => {
+        state.filmRoll.unshift({ id: Date.now() + Math.random(), dataUrl, img, label });
+        if (state.filmRoll.length > 18) state.filmRoll.pop();
+        selectRollPhoto(0);
+      };
+      img.src = dataUrl;
+    }
+
+    function selectRollPhoto(index) {
+      const item = state.filmRoll[index];
+      if (!item) return;
+      state.activeRollIndex = index;
+      state.sourceImage = item.img;
+      needsPixelReprocess = true;
+      renderFilmStrip();
+      showPhotoInTray();
+      renderPolaroid();
+    }
+
+    function deleteRollPhoto(index, fedToPet = false) {
+      if (index < 0 || index >= state.filmRoll.length) return;
+      const wasActive = (index === state.activeRollIndex);
+      state.filmRoll.splice(index, 1);
+
+      if (state.filmRoll.length === 0) {
+        state.activeRollIndex = -1; state.sourceImage = null;
+        hidePhotoInTray(fedToPet);
+      } else {
+        const nextIdx = Math.min(index, state.filmRoll.length - 1);
+        if (wasActive || state.activeRollIndex > index) {
+          state.activeRollIndex = wasActive ? nextIdx : state.activeRollIndex - 1;
+        }
+        if (wasActive) {
+          if (fedToPet) { hidePhotoInTray(true); state.sourceImage = state.filmRoll[state.activeRollIndex].img; }
+          else selectRollPhoto(state.activeRollIndex);
+        }
+      }
+      renderFilmStrip();
+    }
+
+    function renderFilmStrip() {
+      rollCount.textContent = `${state.filmRoll.length} 张存档`;
+      filmStrip.innerHTML = '';
+      if (state.filmRoll.length === 0) {
+        filmStrip.innerHTML = '<div style="font-size:12px;color:var(--mocha);padding:8px 4px;">存档架空空如也~ 上传照片或按快门抓拍即可存入</div>';
+        return;
+      }
+
+      state.filmRoll.forEach((item, idx) => {
+        const card = document.createElement('div');
+        card.className = `archive-card ${idx === state.activeRollIndex ? 'active' : ''}`;
+        card.innerHTML = `<img src="${item.dataUrl}" /><button class="archive-del" title="删除">×</button>`;
+
+        card.querySelector('.archive-del').addEventListener('pointerdown', e => e.stopPropagation());
+        card.querySelector('.archive-del').addEventListener('click', (e) => {
+          e.stopPropagation(); deleteRollPhoto(idx, false);
+        });
+
+        let arcDrag = false, sx = 0, sy = 0, dist = 0, ghost = null;
+        card.addEventListener('pointerdown', (e) => {
+          arcDrag = true; dist = 0; sx = e.clientX; sy = e.clientY;
+          card.setPointerCapture(e.pointerId);
+        });
+        card.addEventListener('pointermove', (e) => {
+          if (!arcDrag) return;
+          dist = Math.hypot(e.clientX - sx, e.clientY - sy);
+          if (dist > 8) {
+            if (!ghost) {
+              ghost = document.createElement('div');
+              ghost.className = 'drag-ghost';
+              ghost.innerHTML = `<img src="${item.dataUrl}" />`;
+              document.body.appendChild(ghost);
+              card.style.opacity = '0.35';
+            }
+            ghost.style.left = `${e.clientX}px`; ghost.style.top = `${e.clientY}px`;
+            if (isOverPet(e.clientX, e.clientY)) {
+              petBin.classList.add('pet-hungry'); petBubble.textContent = '啊呜！快喂给我吃！';
+            } else {
+              petBin.classList.remove('pet-hungry');
+            }
+          }
+        });
+        card.addEventListener('pointerup', (e) => {
+          if (!arcDrag) return;
+          arcDrag = false; card.style.opacity = '1';
+          if (ghost) { ghost.remove(); ghost = null; }
+          petBin.classList.remove('pet-hungry');
+
+          if (dist <= 8) { selectRollPhoto(idx); triggerEjectAndDevelop(false); }
+          else if (isOverPet(e.clientX, e.clientY)) { triggerPetEatEffect(); deleteRollPhoto(idx, true); }
+        });
+        filmStrip.appendChild(card);
+      });
+    }
+
+    function showPhotoInTray() {
+      state.hasPhotoInTray = true;
+      photoCard.style.display = 'block'; photoCard.style.transform = '';
+      cardModeBar.style.display = 'flex';
+      emptySlot.style.display = 'none';
+      printActions.style.display = 'flex'; printStatus.style.display = 'block';
+    }
+
+    function hidePhotoInTray(fedToPet = false) {
+      state.hasPhotoInTray = false;
+      photoCard.style.display = 'none';
+      cardModeBar.style.display = 'none';
+      emptySlot.style.display = 'block';
+      emptySlot.innerHTML = fedToPet
+        ? '🐾 照片已经被小猫「团团」吃掉啦！<br />点击 3D 相机快门再拍一张，或点下面存档里的照片继续制作~'
+        : '✨ 桌面上暂时没有照片啦~ 按快门或上传照片即可开始！';
+      printActions.style.display = 'none'; printStatus.style.display = 'none';
+    }
+
+    // ====== 9. 照片墙拼图模式 ======
+    function addCurrentToWall(silent = false) {
+      const comp = exportCompositeCanvas();
+      const dataUrl = comp.toDataURL('image/png');
+      const id = Date.now() + Math.random();
+      const boardW = wallBoard.clientWidth || 760;
+      const boardH = wallBoard.clientHeight || 540;
+
+      state.wallItems.push({
+        id,
+        dataUrl,
+        w: comp.width,
+        h: comp.height,
+        x: 40 + Math.random() * Math.max(80, boardW - 260),
+        y: 35 + Math.random() * Math.max(80, boardH - 280),
+        rot: (Math.random() - 0.5) * 18,
+        z: state.wallItems.length + 1,
+        tapeColor: ['#ffa898', '#9be2cb', '#ffd88a', '#d7c2ff'][state.wallItems.length % 4]
+      });
+      wallCountBadge.textContent = state.wallItems.length;
+      if (!silent) {
+        const btn = document.getElementById('addToWallBtn');
+        const old = btn.textContent;
+        btn.textContent = '✅ 已贴上照片墙！';
+        setTimeout(() => btn.textContent = old, 1400);
+      }
+      renderWallBoard();
+    }
+
+    document.getElementById('addToWallBtn').addEventListener('click', () => addCurrentToWall(false));
+
+    function renderWallBoard() {
+      // 保留控件栏，重新渲染所有贴纸拍立得
+      wallBoard.querySelectorAll('.wall-item').forEach(el => el.remove());
+
+      state.wallItems.forEach(item => {
+        const div = document.createElement('div');
+        div.className = `wall-item ${state.selectedWallId === item.id ? 'selected' : ''}`;
+        div.style.left = `${item.x}px`;
+        div.style.top = `${item.y}px`;
+        div.style.zIndex = item.z;
+        div.style.transform = `rotate(${item.rot}deg)`;
+        div.innerHTML = `<div class="washi-tape" style="background:${item.tapeColor};opacity:0.82;"></div><img src="${item.dataUrl}" />`;
+
+        let wDrag = false, sx = 0, sy = 0, ox = 0, oy = 0;
+        div.addEventListener('pointerdown', (e) => {
+          e.stopPropagation();
+          state.selectedWallId = item.id;
+          item.z = Math.max(...state.wallItems.map(i => i.z), 0) + 1;
+          wallBoard.querySelectorAll('.wall-item').forEach(el => el.classList.remove('selected'));
+          div.classList.add('selected');
+          div.style.zIndex = item.z;
+          wallItemControls.classList.add('show');
+
+          wDrag = true; sx = e.clientX; sy = e.clientY; ox = item.x; oy = item.y;
+          div.setPointerCapture(e.pointerId);
+        });
+        div.addEventListener('pointermove', (e) => {
+          if (!wDrag) return;
+          item.x = ox + (e.clientX - sx);
+          item.y = oy + (e.clientY - sy);
+          div.style.left = `${item.x}px`;
+          div.style.top = `${item.y}px`;
+        });
+        div.addEventListener('pointerup', () => { wDrag = false; });
+
+        wallBoard.appendChild(div);
+      });
+
+      wallItemControls.classList.toggle('show', Boolean(state.selectedWallId));
+    }
+
+    wallBoard.addEventListener('pointerdown', () => {
+      state.selectedWallId = null;
+      wallBoard.querySelectorAll('.wall-item').forEach(el => el.classList.remove('selected'));
+      wallItemControls.classList.remove('show');
+    });
+
+    document.getElementById('wallRotLeftBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const it = state.wallItems.find(i => i.id === state.selectedWallId);
+      if (it) { it.rot -= 6; renderWallBoard(); }
+    });
+    document.getElementById('wallRotRightBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const it = state.wallItems.find(i => i.id === state.selectedWallId);
+      if (it) { it.rot += 6; renderWallBoard(); }
+    });
+    document.getElementById('wallFrontBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const it = state.wallItems.find(i => i.id === state.selectedWallId);
+      if (it) { it.z = Math.max(...state.wallItems.map(i => i.z), 0) + 1; renderWallBoard(); }
+    });
+    document.getElementById('wallRemoveBtn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.wallItems = state.wallItems.filter(i => i.id !== state.selectedWallId);
+      state.selectedWallId = null;
+      wallCountBadge.textContent = state.wallItems.length;
+      renderWallBoard();
+    });
+
+    document.querySelectorAll('.wall-themes .apple-pill-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.wall-themes .apple-pill-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.wallTheme = btn.dataset.wall;
+        wallBoard.className = `wall-board wall-theme-${state.wallTheme}`;
+      });
+    });
+
+    document.getElementById('scatterWallBtn').addEventListener('click', () => {
+      const bw = wallBoard.clientWidth || 760, bh = wallBoard.clientHeight || 540;
+      state.wallItems.forEach(it => {
+        it.x = 30 + Math.random() * Math.max(80, bw - 240);
+        it.y = 30 + Math.random() * Math.max(80, bh - 260);
+        it.rot = (Math.random() - 0.5) * 24;
+      });
+      renderWallBoard();
+    });
+
+    // 导出高清照片墙海报
+    document.getElementById('exportWallBtn').addEventListener('click', async () => {
+      const bw = wallBoard.clientWidth || 800, bh = wallBoard.clientHeight || 600;
+      const scale = 2;
+      const poster = document.createElement('canvas');
+      poster.width = bw * scale; poster.height = bh * scale;
+      const pctx = poster.getContext('2d');
+
+      // 背景主题绘制
+      if (state.wallTheme === 'peach') {
+        const g = pctx.createLinearGradient(0, 0, poster.width, poster.height);
+        g.addColorStop(0, '#ffe7dc'); g.addColorStop(0.5, '#fff4e8'); g.addColorStop(1, '#fbe3f3');
+        pctx.fillStyle = g; pctx.fillRect(0, 0, poster.width, poster.height);
+      } else if (state.wallTheme === 'mint') {
+        pctx.fillStyle = '#e9f9f3'; pctx.fillRect(0, 0, poster.width, poster.height);
+      } else if (state.wallTheme === 'star') {
+        const g = pctx.createLinearGradient(0, 0, poster.width, poster.height);
+        g.addColorStop(0, '#3c2846'); g.addColorStop(1, '#7d4c55');
+        pctx.fillStyle = g; pctx.fillRect(0, 0, poster.width, poster.height);
+      } else {
+        pctx.fillStyle = '#fff6ea'; pctx.fillRect(0, 0, poster.width, poster.height);
+      }
+
+      const sorted = [...state.wallItems].sort((a, b) => a.z - b.z);
+      const itemDomW = window.innerWidth <= 920 ? 145 : 195;
+
+      for (const item of sorted) {
+        const img = await new Promise(res => { const im = new Image(); im.onload = () => res(im); im.src = item.dataUrl; });
+        const dw = itemDomW * scale;
+        const dh = dw * (img.height / img.width);
+        const cx = (item.x + itemDomW / 2) * scale;
+        const cy = (item.y + (dh / scale) / 2) * scale;
+
+        pctx.save();
+        pctx.translate(cx, cy);
+        pctx.rotate((item.rot * Math.PI) / 180);
+        pctx.shadowColor = 'rgba(110, 55, 35, 0.28)';
+        pctx.shadowBlur = 26 * scale;
+        pctx.shadowOffsetY = 12 * scale;
+        pctx.drawImage(img, -dw / 2, -dh / 2, dw, dh);
+        pctx.shadowColor = 'transparent';
+        pctx.fillStyle = item.tapeColor;
+        pctx.globalAlpha = 0.85;
+        pctx.fillRect(-34 * scale, -dh / 2 - 10 * scale, 68 * scale, 20 * scale);
+        pctx.restore();
+      }
+
+      saveCanvasToDevice(poster, `polaroid-wall-${Date.now()}.png`, '📌 照片墙高清海报');
+    });
+
+    // ====== 10. 音效、摄像头、快门与存入相册 ======
+    function playShutterSound() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext; if (!AudioCtx) return;
+        const a = new AudioCtx(), o = a.createOscillator(), g = a.createGain();
+        o.type = 'triangle'; o.frequency.setValueAtTime(650, a.currentTime); o.frequency.exponentialRampToValueAtTime(85, a.currentTime + 0.06);
+        g.gain.setValueAtTime(0.35, a.currentTime); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.07);
+        o.connect(g).connect(a.destination); o.start(); o.stop(a.currentTime + 0.08);
+        const m = a.createOscillator(), mg = a.createGain();
+        m.type = 'sawtooth'; m.frequency.setValueAtTime(115, a.currentTime + 0.07); m.frequency.linearRampToValueAtTime(135, a.currentTime + 0.65);
+        mg.gain.setValueAtTime(0.001, a.currentTime + 0.07); mg.gain.linearRampToValueAtTime(0.07, a.currentTime + 0.14); mg.gain.exponentialRampToValueAtTime(0.001, a.currentTime + 0.85);
+        m.connect(mg).connect(a.destination); m.start(a.currentTime + 0.07); m.stop(a.currentTime + 0.9);
+      } catch (e) {}
+    }
+
+    function playChompSound() {
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext; if (!AudioCtx) return;
+        const a = new AudioCtx();
+        [0, 0.15].forEach(t => {
+          const o = a.createOscillator(), g = a.createGain();
+          o.type = 'sine'; o.frequency.setValueAtTime(380, a.currentTime + t); o.frequency.exponentialRampToValueAtTime(160, a.currentTime + t + 0.1);
+          g.gain.setValueAtTime(0.24, a.currentTime + t); g.gain.exponentialRampToValueAtTime(0.001, a.currentTime + t + 0.11);
+          o.connect(g).connect(a.destination); o.start(a.currentTime + t); o.stop(a.currentTime + t + 0.12);
+        });
+      } catch (e) {}
+    }
+
+    function triggerEjectAndDevelop(withFlash = true) {
+      if (!state.sourceImage) return;
+      showPhotoInTray();
+      playShutterSound();
+      shutterAnim = 1; ejectAnim = 1;
+      if (withFlash) {
+        flashAnim = 1; flashOverlay.classList.remove('bang'); void flashOverlay.offsetWidth; flashOverlay.classList.add('bang');
+      }
+      photoCard.classList.remove('ejecting'); void photoCard.offsetWidth; photoCard.classList.add('ejecting');
+      startDevelopingProcess();
+    }
+
+    function fireShutter() {
+      if (state.cameraActive) {
+        const vw = cameraVideo.videoWidth || 720, vh = cameraVideo.videoHeight || 720;
+        const c = document.createElement('canvas'); c.width = vw; c.height = vh;
+        const g = c.getContext('2d');
+        if (state.facingMode === 'user') { g.translate(vw, 0); g.scale(-1, 1); }
+        g.drawImage(cameraVideo, 0, 0, vw, vh);
+        addPhotoToRoll(c.toDataURL('image/png'), '实时抓拍');
+        setTimeout(() => triggerEjectAndDevelop(true), 50);
+      } else {
+        if (!state.sourceImage && state.filmRoll.length > 0) selectRollPhoto(0);
+        triggerEjectAndDevelop(true);
+      }
+    }
+
+    document.getElementById('shutterBtn').addEventListener('click', fireShutter);
+
+    async function startCamera() {
+      camAlert.style.display = 'none';
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        camAlert.textContent = '⚠️ 本地直接打开文件受浏览器安全限制无法调用摄像头（打包成 App 后可正常使用）。你依然可以上传本地照片体验！';
+        camAlert.style.display = 'block'; return;
+      }
+      stopCameraStream();
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: state.facingMode, width: { ideal: 1080 }, height: { ideal: 1080 } }, audio: false
+        });
+        state.stream = stream; state.cameraActive = true; cameraVideo.srcObject = stream;
+        toggleCamBtn.classList.add('active'); toggleCamBtn.textContent = '⏹️ 关闭摄像头';
+        flipCamBtn.style.display = 'inline-flex';
+      } catch (err) {
+        camAlert.textContent = '⚠️ 未能获得摄像头权限，请检查浏览器授权，或直接上传本地照片体验。';
+        camAlert.style.display = 'block';
+      }
+    }
+
+    function stopCameraStream() {
+      if (state.stream) { state.stream.getTracks().forEach(t => t.stop()); state.stream = null; }
+      state.cameraActive = false; toggleCamBtn.classList.remove('active');
+      toggleCamBtn.textContent = '📷 实时摄像头'; flipCamBtn.style.display = 'none';
+    }
+
+    toggleCamBtn.addEventListener('click', () => state.cameraActive ? stopCameraStream() : startCamera());
+    flipCamBtn.addEventListener('click', () => { state.facingMode = state.facingMode === 'user' ? 'environment' : 'user'; startCamera(); });
+
+    function saveCanvasToDevice(targetCanvas, filename, modalTitle = '📸 高清拍立得已生成') {
+      targetCanvas.toBlob(async (blob) => {
+        const file = new File([blob], filename, { type: 'image/png' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          try { await navigator.share({ files: [file], title: modalTitle }); return; }
+          catch (err) { if (err.name === 'AbortError') return; }
+        }
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a'); a.href = url; a.download = filename; a.click();
+        if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) {
+          document.getElementById('modalTitle').textContent = modalTitle;
+          document.getElementById('modalImg').src = targetCanvas.toDataURL('image/png');
+          document.getElementById('modalDesc').innerHTML = '📱 手机用户请<strong>长按上方图片</strong>，选择「保存到相册 / 存储图像」即可存入本地相册！';
+          document.getElementById('saveModal').classList.add('open');
+        }
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }, 'image/png');
+    }
+
+    document.getElementById('saveBtn').addEventListener('click', () => {
+      saveCanvasToDevice(exportCompositeCanvas(), `peach-instant-${state.model}-${Date.now()}.png`);
+    });
+
+    document.getElementById('closeModalBtn').addEventListener('click', () => document.getElementById('saveModal').classList.remove('open'));
+    document.getElementById('saveModal').addEventListener('click', (e) => { if (e.target.id === 'saveModal') e.target.classList.remove('open'); });
+
+    // ====== 11. 右侧面板控制绑定 ======
+    document.getElementById('fileInput').addEventListener('change', (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        stopCameraStream();
+        addPhotoToRoll(ev.target.result, file.name);
+        setTimeout(() => triggerEjectAndDevelop(false), 60);
+      };
+      reader.readAsDataURL(file); e.target.value = '';
+    });
+
+    function bindGroup(groupId, attr, cb) {
+      const el = document.getElementById(groupId);
+      el.addEventListener('click', (e) => {
+        const btn = e.target.closest('button'); if (!btn) return;
+        if (btn.classList.contains('locked')) {
+          petBubble.textContent = '🔒 这是稀有盲盒相纸哦！喂我吃满 3 张废片就解锁！';
+          return;
+        }
+        el.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active'); cb(btn.dataset[attr]);
+      });
+    }
+
+    bindGroup('modelGroup', 'model', (val) => {
+      state.model = val; hudModelTag.textContent = `3D · ${MODELS[val].name}`;
+      build3DCameraModel(val); needsPixelReprocess = true; renderPolaroid();
+    });
+    bindGroup('styleGroup', 'style', (val) => { state.style = val; needsPixelReprocess = true; renderPolaroid(); });
+    bindGroup('paperGroup', 'paper', (val) => { state.paper = val; renderPolaroid(); });
+
+    document.getElementById('grainToggle').addEventListener('change', (e) => { state.grain = e.target.checked; needsPixelReprocess = true; renderPolaroid(); });
+    document.getElementById('leakToggle').addEventListener('change', (e) => { state.leak = e.target.checked; needsPixelReprocess = true; renderPolaroid(); });
+    document.getElementById('rerollLeakBtn').addEventListener('click', () => {
+      state.leakSeed = Math.random();
+      if (!state.leak) { state.leak = true; document.getElementById('leakToggle').checked = true; }
+      needsPixelReprocess = true; renderPolaroid();
+    });
+    document.getElementById('dateToggle').addEventListener('change', (e) => { state.dateStamp = e.target.checked; needsPixelReprocess = true; renderPolaroid(); });
+    document.getElementById('captionInput').addEventListener('input', (e) => { state.caption = e.target.value; renderPolaroid(); });
+
+    // ====== 初始化 ======
+    init3DStage();
+    const sampleUrl = createSampleDataUrl();
+    const initImg = new Image();
+    initImg.onload = () => {
+      state.filmRoll.push({ id: 1, dataUrl: sampleUrl, img: initImg, label: '蜜桃日落示例' });
+      selectRollPhoto(0);
+      addCurrentToWall(true); // 预先放一张到照片墙供预览
+    };
+    initImg.src = sampleUrl;
+  </script>
+</body>
+</html>
+```
+
+---
